@@ -19,8 +19,8 @@ mag_abd_dists<-vegdist(all_mag_abd_df, method = dist_metric)
 
 mag_abd_dists_df<-as.data.frame(as.matrix(mag_abd_dists))
 
-#valid_mags_posit<-rownames(mag_abd_dists_df) %in% mag_data$MAG[which(mag_data$Domain == "Archaea")]
-valid_mags_posit<-rownames(mag_abd_dists_df) %in% mag_data$MAG[which(mag_data$Domain == "Bacteria")]
+valid_mags_posit<-rownames(mag_abd_dists_df) %in% mag_data$MAG[which(mag_data$Domain == "Archaea")]
+#valid_mags_posit<-rownames(mag_abd_dists_df) %in% mag_data$MAG[which(mag_data$Domain == "Bacteria")]
 summary(valid_mags_posit)
 valid_mag_abd_dists_df<-mag_abd_dists_df[valid_mags_posit,valid_mags_posit]
 dim(valid_mag_abd_dists_df)
@@ -40,8 +40,8 @@ summary(top10_mag_bray_pca_loadings)
 ###GTDBtk tree MAG phylo distance
 library("ape")
 
-#gtdb_phylo_tree<-read.tree(file="/mnt/lustre/scratch/fcoutinho/Profiles_Malaspina/Assemblies_Round2/Metabat_Binning/Redo_MetaBat_Bins_Round_1/MAGs_Original_and_Refined_GTDBtk_Output/Profiles_Malaspina_MetaBat_Redo_MAGs_GTDBtk_Output.ar122.classify.tree")
-gtdb_phylo_tree<-read.tree(file="/mnt/lustre/scratch/fcoutinho/Profiles_Malaspina/Assemblies_Round2/Metabat_Binning/Redo_MetaBat_Bins_Round_1/MAGs_Original_and_Refined_GTDBtk_Output/Profiles_Malaspina_MetaBat_Redo_MAGs_GTDBtk_Output.bac120.classify.tree")
+gtdb_phylo_tree<-read.tree(file="/mnt/lustre/scratch/fcoutinho/Profiles_Malaspina/Assemblies_Round2/Metabat_Binning/Redo_MetaBat_Bins_Round_1/MAGs_Original_and_Refined_GTDBtk_Output/Profiles_Malaspina_MetaBat_Redo_MAGs_GTDBtk_Output.ar122.classify.tree")
+#gtdb_phylo_tree<-read.tree(file="/mnt/lustre/scratch/fcoutinho/Profiles_Malaspina/Assemblies_Round2/Metabat_Binning/Redo_MetaBat_Bins_Round_1/MAGs_Original_and_Refined_GTDBtk_Output/Profiles_Malaspina_MetaBat_Redo_MAGs_GTDBtk_Output.bac120.classify.tree")
 
 summary(gtdb_phylo_tree)
 
@@ -70,14 +70,14 @@ library("relaimpo", lib.loc="/mnt/lustre/bio/users/fcoutinho/Rlibs/")
 
 mag_data_for_lm<-merge(top10_mag_gtdb_phylo_pca_loadings,subset(mag_data,select=c("MAG","Estimated_Genome_Size","Total_CDS","Total_KOs","Unique_KOs","TKO_Density","UKO_Density","CDS_Density","Domain","Phylum","Class","Order","Family","Genus","Species","Count_of_Unique_Defense_Systems","DS_Prevalence_per_Mbp","Prophage_Count","Prophage_Perc")),by="MAG",all.x=TRUE)
 
-summary(mag_data_for_lm)
+#summary(mag_data_for_lm)
 
 mag_data_for_lm<-merge(mag_data_for_lm,top10_mag_bray_pca_loadings,by="MAG",all.x=TRUE)
 
 summary(mag_data_for_lm)
 
 ###Multiple models for all response variables
-response_vars<-c("Estimated_Genome_Size","Total_CDS","Total_KOs","Unique_KOs","TKO_Density","UKO_Density","CDS_Density")
+response_vars<-c("Estimated_Genome_Size","Total_CDS","Total_KOs","Unique_KOs","TKO_Density","UKO_Density","CDS_Density","Count_of_Unique_Defense_Systems","DS_Prevalence_per_Mbp","Prophage_Count","Prophage_Perc")
 results_df<-rbind()
 
 for (rvar in response_vars) {
@@ -124,7 +124,7 @@ for (colnum in c(2:4)) {
 }
 summary(results_df)
 
-fig_6A<-ggplot(results_df,aes(x=Variance_Explained_by_Abundance,y=Variance_Explained_by_Phylogeny))+geom_smooth(method = "lm",colour="blue",se=FALSE,  formula = y ~ x)+geom_label(aes(label=Response_Variable),size=1.5)+theme_bw()+xlim(0,40)+ylim(10,80)
+fig_6A<-ggplot(results_df,aes(x=Variance_Explained_by_Abundance,y=Variance_Explained_by_Phylogeny))+geom_smooth(method = "lm",colour="blue",se=FALSE,  formula = y ~ x)+geom_label(aes(label=Response_Variable),size=1.5)+theme_bw()+xlim(0,50)+ylim(0,100)
 
-ggsave("Malaspina_Profiles_Figure_6B_Bacteria.pdf",plot=fig_6A,device=cairo_pdf,width=7,height=5,pointsize=8)
+ggsave("Malaspina_Profiles_Figure_6A_Archaea.pdf",plot=fig_6A,device=cairo_pdf,width=7,height=5,pointsize=8)
 
