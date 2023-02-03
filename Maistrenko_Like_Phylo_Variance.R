@@ -14,8 +14,8 @@ level<-args[1]
 taxon<-args[2]
 dist_metric<-args[3]
 transfo<-args[4]
-#max_pcs<-args[5]
-#min_pc_var_exp<-args[6]
+max_pcs<-as.numeric(args[5])
+min_pc_var_exp<-as.numeric(args[6])
 
 library("vegan")
 library(reshape2)
@@ -50,7 +50,8 @@ get_phylo_pca<-function (level,taxon) {
 	top10_mag_gtdb_phylo_pca_loadings<-as.data.frame(mag_gtdb_phylo_pca_loadings[,1:n_pc_phylo_to_use])
 	top10_mag_gtdb_phylo_pca_loadings$MAG<-rownames(top10_mag_gtdb_phylo_pca_loadings)
 
-	print(paste("Will use ",n_pc_phylo_to_use," PCs from the phylogenetic PCA, which together explain ",summary(mag_phylo_pca_evals)[3,n_pc_phylo_to_use]," % of the variance",sep=""))
+	#summary(mag_phylo_pca_evals)[3,n_pc_phylo_to_use],
+	print(paste("Will use ",n_pc_phylo_to_use," PCs from the phylogenetic PCA, which together explain "," % of the variance",sep=""))
 	colnames(top10_mag_gtdb_phylo_pca_loadings)<-gsub("Comp.","Phylo_PC_",colnames(top10_mag_gtdb_phylo_pca_loadings),perl=TRUE)
 	return(top10_mag_gtdb_phylo_pca_loadings)
 }
@@ -73,7 +74,8 @@ get_abd_pca<-function (level,taxon) {
 	n_pc_for_min_var_abd<-length(which(summary(mag_abd_pca_evals)[3,] <= min_pc_var_exp))
 	n_pc_abd_to_use<-min(c(n_pc_for_min_var_abd,max_pcs))
 	#summary(mag_bray_pca_loadings)
-	print(paste("Will use ",n_pc_abd_to_use," PCs from the abundance PCA, which together explain ",summary(mag_abd_pca_evals)[3,n_pc_abd_to_use]," % of the variance",sep=""))
+	#summary(mag_abd_pca_evals)[3,n_pc_abd_to_use],
+	print(paste("Will use ",n_pc_abd_to_use," PCs from the abundance PCA, which together explain "," % of the variance",sep=""))
 	top10_mag_bray_pca_loadings<-as.data.frame(mag_bray_pca_loadings[,1:n_pc_abd_to_use])
 	top10_mag_bray_pca_loadings$MAG<-rownames(all_mag_abd_df)[valid_mags_posit]
 
@@ -104,7 +106,7 @@ mag_abd_dists<-vegdist(all_mag_abd_df, method = dist_metric)
 mag_abd_dists_df<-as.data.frame(as.matrix(mag_abd_dists))
 
 results_df<-c()
-taxon_mag_count<-table(mag_data[which(mag_data$Domain == "Bacteria"),][[level]])
+taxon_mag_count<-table(mag_data[which(mag_data$Domain == taxon),][[level]])
 taxa_list<-names(taxon_mag_count[which(taxon_mag_count >= 10)])
 ####Loop over taxa
 for (tx in taxa_list) {
@@ -185,23 +187,70 @@ results_df$Variance_Explained_by_Abundance<-as.numeric(results_df$Variance_Expla
 
 summary(results_df)
 
-
-
+###Table
 print("Printing results")
 write.table(results_df,file="Variance_Explained.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
 
+library(reshape2)
+library(ggplot2)
+library(RColorBrewer)
+
+
+###Scatterplot
 fig_name<-paste("Malaspina_Profiles_PhyloxHabitat_Variance_",level,"Transf","_",transfo,"_","Distance_Metric","_",dist_metric,"_Min_Var_Exp_by_PCs_",as.character(min_pc_var_exp),"_Scatterplot.pdf",sep="")
 
 fig1<-ggplot(results_df,aes(x=Variance_Explained_by_Abundance,y=Variance_Explained_by_Phylogeny))+geom_smooth(method = "lm",colour="darkblue",se=FALSE,  formula = y ~ x)+geom_label(aes(label=Response_Variable),size=1.5)+theme_bw()+xlab("% Variance Explained by Habitat")+ylab("% Variance Explained by Phylogeny")+xlim(0,100)+ylim(0,100)+facet_wrap(. ~ Taxon)
 
 ggsave(fig_name,plot=fig1,device=cairo_pdf,width=20,height=20,pointsize=8)
 
-fig_name<-paste("Malaspina_Profiles_PhyloxHabitat_Variance_",level,"Transf","_",transfo,"_","Distance_Metric","_",dist_metric,"_Min_Var_Exp_by_PCs_",as.character(min_pc_var_exp),"_Barrplot.pdf",sep="")
+###
+results_df<-read.table(file="Variance_Explained.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+summary(results_df)
+
 
 mdata<-melt(results_df,id=c("Taxonomic_Level","Taxon","Response_Variable"))
+fmdata<-mdata[which(mdata$variable != "Total_Variance_Explained"),]
 
-fig2<-ggplot(mdata,aes(x=Taxon,y=Variance_Explained_by_Phylogeny))+theme_bw()+xlab("% Variance Explained by Habitat")+ylab("Variance Explained")+facet_grid(Response_Variable ~ .)
+colnames(fmdata)<-c("Taxonomic_Level","Taxon","Response_Variable","Category","Variance_Explained")
+fmdata$Category<-as.factor(gsub("Variance_Explained_by_","",fmdata$Category,perl=TRUE))
 
-ggsave(fig_name,plot=fig2,device=cairo_pdf,width=20,height=20,pointsize=8)
+fmdata$Response_Variable<-as.factor(gsub("_"," ",fmdata$Response_Variable,perl=TRUE))
 
-quit(status=0)
+summary(fmdata)
+
+#fig_name<-"Variance_Explained_Test_Barplot.pdf"
+
+#Heatmap
+fig_name<-paste("Malaspina_Profiles_PhyloxHabitat_Variance_",level,"Transf","_",transfo,"_","Distance_Metric","_",dist_metric,"_Min_Var_Exp_by_PCs_",as.character(min_pc_var_exp),"_Heatmap.pdf",sep="")
+
+#fig_name<-"Variance_Explained_Test_Heatmap.pdf"
+
+col_pal<-brewer.pal(11,"Spectral")
+col_grad<-rev(colorRampPalette(col_pal)(n=100))
+
+taxon_order<-c("Acidobacteriota","Actinobacteriota","Bacteroidota","Bdellovibrionota","Chlamydiota","Chloroflexota","Cyanobacteria","Desulfobacterota","Desulfobacterota_D","Eremiobacterota","Gemmatimonadota","Margulisbacteria","Marinisomatota","Myxococcota","Nitrospinota","Patescibacteria","Planctomycetota","Poribacteria","Alphaproteobacteria","Gammaproteobacteria","SAR324","UBP7","Verrucomicrobiota","Halobacteriota","Hydrothermarchaeota","Nanoarchaeota","Thermoplasmatota","Thermoproteota")
+sub_taxon_order<-taxon_order[which(taxon_order %in% unique(fmdata$Taxon))]
+
+summary(fmdata)
+
+library(stringr)
+fmdata$Response_Variable<-as.factor(str_wrap(fmdata$Response_Variable,width=10))
+
+fig3<-ggplot(fmdata,aes(fill=Variance_Explained,y=Taxon,x=Category))+geom_tile(colour = "grey50")+theme_bw()+theme(axis.text.x = element_text(angle = 90,hjust = 1,size=6),axis.text.y = element_text(size=8))+scale_fill_gradientn(name="% Variance Explained",colours =col_grad,limits = c(0,100))+theme(legend.position="top")+facet_grid(. ~ Response_Variable)+ylim(rev(sub_taxon_order))
+
+ggsave(fig_name,plot=fig3,device=cairo_pdf,width=10,height=5,pointsize=8)
+
+###Barplot
+fig_name<-paste("Malaspina_Profiles_PhyloxHabitat_Variance_",level,"Transf","_",transfo,"_","Distance_Metric","_",dist_metric,"_Min_Var_Exp_by_PCs_",as.character(min_pc_var_exp),"_Barplot.pdf",sep="")
+
+
+var_coloring<-brewer.pal(9,"RdBu")[c(2,8)]
+names(var_coloring)<-unique(fmdata$Category)
+
+fig2<-ggplot(fmdata,aes(x=Taxon,y=Variance_Explained,fill=Category,group=Category))+geom_bar(position="dodge",stat="identity",colour="black",alpha=0.9,linewidth=0.1)+theme_bw()+ylab("% Variance Explained")+theme(axis.text.x = element_text(angle = 90,hjust = 1,size=9),legend.position="top")+scale_fill_manual(name="Explaining Variable",values=var_coloring)+facet_wrap(. ~ Response_Variable, nrow=3)
+
+ggsave(fig_name,plot=fig2,device=cairo_pdf,width=9,height=10,pointsize=8)
+
+
+
+#quit(status=0)
