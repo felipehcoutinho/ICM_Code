@@ -7,24 +7,22 @@ args = commandArgs(trailingOnly=TRUE)
 response_file<-args[1]
 response_variables<-strsplit(args[2],",")[[1]]
 predictor_file<-args[3]
-max_opt_tries<-as.numeric(args[4])
-max_rmse<-as.numeric(args[5])
-cor_cutoff<-as.numeric(args[6])
-tree_num<-as.numeric(args[7]) #Number of trees to grow
-var_tries<-as.numeric(args[8]) #Variables to try at each split when growing trees
-node_size<-as.numeric(args[9]) #Node size for the probabilistic forest
-threads<-as.numeric(args[10])
+max_rmse<-as.numeric(args[4])
+cor_cutoff<-as.numeric(args[5])
+tree_num<-as.numeric(args[6]) #Number of trees to grow
+var_tries<-as.numeric(args[7]) #Variables to try at each split when growing trees
+node_size<-as.numeric(args[8]) #Node size for the probabilistic forest
+threads<-as.numeric(args[9])
 
 load_defaults<-FALSE
 if(load_defaults == TRUE) {
-	response_file<-"/mnt/lustre/scratch/fcoutinho/StG_23/Metadata/TARA_Salazar_19_MGs_Metadata.tsv"
-	response_variables<-strsplit("Temperature,Oxygen,ChlorophyllA,Salinity,Iron.5m,Ammonium.5m",",")[[1]]
-	predictor_file<-"/mnt/lustre/scratch/fcoutinho/StG_23/Prokaryotes/Abundance/RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_Species_Cluster.tsv"
-	max_opt_tries<-1
+	response_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/Marine_Viral_Communities_Sample_Metadata_Updated_with_Guidi.tsv"#"/mnt/lustre/scratch/fcoutinho/StG_23/Metadata/TARA_Salazar_19_MGs_Metadata.tsv"
+	response_variables<-"Mean.Flux.at.150m"#strsplit("Temperature,Oxygen,ChlorophyllA,Salinity,Iron.5m,Ammonium.5m",",")[[1]]
+	predictor_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/StG23_Viruses_Min_Prev_50_Raw_Abundance.tsv"#"/mnt/lustre/scratch/fcoutinho/StG_23/Prokaryotes/Abundance/RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_Species_Cluster.tsv"
 	max_rmse<-100000
 	cor_cutoff<-0.5
-	tree_num<-10000
-	var_tries<-1000
+	tree_num<-5000
+	var_tries<-500
 	node_size<-1
 	threads<-47
 }
@@ -120,9 +118,9 @@ for (var in response_variables) {
 	colnames(passed_importance)<-c("Predictor","importance")
 	passed_importance$importance<-as.numeric(passed_importance$importance)
 	passed_importance$Response<-var
-	passed_importance$RMSEV<-rmse_t
-	passed_importance$CorV<-cor_t$estimate
-	passed_importance$Method<-"Impurity"
+	#passed_importance$RMSEV<-rmse_t
+	#passed_importance$CorV<-cor_t$estimate
+	#passed_importance$Method<-"Impurity"
 	passed_importance$Normalized_Importance<-passed_importance$importance/max((abs(passed_importance$importance)))
 	passed_importance_vals<-rbind(passed_importance_vals,passed_importance)
 
@@ -147,6 +145,8 @@ for (var in response_variables) {
 
 colnames(all_rf_stats)<-c("Response","Iteration","CorV","RMSEv","Passed")
 write.table(all_rf_stats,file="Reverse_Ecology_All_RF_Stats.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
+
+write.table(passed_importance_vals,file="Reverse_Ecology_Passed_RF_Importance.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 write.table(all_preds,file="Reverse_Ecology_Best_RF_Predictions.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
 

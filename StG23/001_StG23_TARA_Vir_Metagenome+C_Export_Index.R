@@ -1,6 +1,3 @@
-library(dplyr)
-library(tidyr)
-
 mgdata<-read.table(file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/Marine_Viral_Communities_Sample_Metadata.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
 summary(mgdata)
 
@@ -23,5 +20,8 @@ summary(guididata$Station_Alias %in% mgdata$Sample)
 fulldata<-merge(mgdata,guididata[,which(colnames(guididata) != "Salinity")],by.x="Sample",by.y="Station_Alias",all.x=TRUE,suffixes=c("_Original","_Guidi"))
 
 summary(fulldata)
+
+fulldata$Samlpe_ID<-fulldata$Sample
+fulldata$Sample<-NULL
 
 write.table(fulldata, file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/Marine_Viral_Communities_Sample_Metadata_Updated_with_Guidi.tsv",sep="\t",quote=FALSE,row.names=FALSE,col.names=TRUE)
