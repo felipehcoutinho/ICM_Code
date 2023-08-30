@@ -67,13 +67,15 @@ f_imp_df[[group_var]]<-as.factor(clean_names)
 summary(f_imp_df)
 
 figX<-ggplot()+
-geom_boxplot(data=f_imp_df,aes(x=f_imp_df[[group_var]], y=log10(Relative_Importance),fill=f_imp_df[[group_var]],group=f_imp_df[[group_var]]),size=0.3,alpha=0.9)+
+#geom_boxplot(data=f_imp_df,aes(x=f_imp_df[[group_var]], y=log10(Relative_Importance),fill=f_imp_df[[group_var]],group=f_imp_df[[group_var]]),size=0.3,alpha=0.9)+
+geom_boxplot(data=f_imp_df,aes(x=f_imp_df[[group_var]], y=Relative_Importance,fill=f_imp_df[[group_var]],group=f_imp_df[[group_var]]),size=0.3,alpha=0.9)+
 theme_bw()+
 scale_fill_manual(name="Predicted Host Taxon",values=phylum_coloring)+
 theme(legend.position="top", axis.text.x = element_text(angle = 90,hjust = 1,size=7), strip.text.y.right = element_text(angle = 0, size =9),legend.title=element_text(size=9))+
 facet_grid(. ~ Response,scales="free_x")+
 guides(col = guide_legend(nrow = 1))+
 xlab(NULL)+
-ylab("Log10(Relative Predictor Importance)")
+ylab("Relative Predictor Importance")
+#ylab("Log10(Relative Predictor Importance)")
 
 ggsave("/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/RE_RF_Models/Reverse_Ecology_Best_RF_Relative_Importance_by_Phylum_Boxplots.pdf",plot=figX,device=cairo_pdf,width=22,height=6,pointsize=8)
