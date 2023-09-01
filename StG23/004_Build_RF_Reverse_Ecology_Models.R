@@ -15,6 +15,7 @@ var_tries<-as.numeric(args[7]) #Variables to try at each split when growing tree
 node_size<-as.numeric(args[8]) #Node size for the probabilistic forest
 threads<-as.numeric(args[9])
 train_iters<-as.numeric(args[10])
+prefix<-args[11]
 
 load_defaults<-FALSE
 if(load_defaults == TRUE) {
@@ -70,18 +71,19 @@ for (resp_var in response_variables) {
 	print("Subset DF dimensions:")
 	print(dim(subdata))
 
-	#Create a data partition and separate the predictors and response df into training and validation subsets
-	trainIndex <- createDataPartition(subdata[[resp_var]], p = 0.7, list = FALSE)
-	train_resp_df<-subdata[trainIndex, resp_var]
-	train_pred_df<-subdata[trainIndex, c(predictor_variables)]
-
-	val_resp_df<-subdata[-trainIndex, resp_var]
-	val_pred_df<-subdata[-trainIndex, c(predictor_variables) ]
 
 	set.seed(3435)
 	#Perform multiple training iterations
 	for (ticount in c(1:train_iters)) {
 		print(paste("Training iteration:",ticount,sep=" "))
+		#Create a data partition and separate the predictors and response df into training and validation subsets
+		trainIndex <- createDataPartition(subdata[[resp_var]], p = 0.7, list = FALSE)
+		train_resp_df<-subdata[trainIndex, resp_var]
+		train_pred_df<-subdata[trainIndex, c(predictor_variables)]
+
+		val_resp_df<-subdata[-trainIndex, resp_var]
+		val_pred_df<-subdata[-trainIndex, c(predictor_variables) ]
+		
 		#Train a  model using the training data
 		train_rf_model<-ranger(y=train_resp_df, x=train_pred_df, num.trees=tree_num, mtry=var_tries, write.forest=TRUE,probability=FALSE,importance="none",min.node.size=node_size,num.threads=threads)
 
@@ -138,12 +140,14 @@ for (resp_var in response_variables) {
 }
 
 colnames(all_rf_stats)<-c("Response","Iteration","Pearson_Cor_Training","RMSE_Training","Pearson_Cor_Validation","RMSE_Validation","Pearson_Cor_Full","RMSE_Full","Passed")
-write.table(all_rf_stats,file="Reverse_Ecology_All_RF_Stats.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
+rf_stats_outname<-paste(prefix,"_Reverse_Ecology_All_RF_Stats.tsv",sep="")
+write.table(all_rf_stats,file=rf_stats_outname,sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
 
-write.table(best_importance_vals,file="Reverse_Ecology_Best_RF_Importance.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
+best_imps_outname<-paste(prefix,"_Reverse_Ecology_Best_RF_Importance.tsv",sep="")
+write.table(best_importance_vals,file=best_imps_outname,sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 #write.table(all_preds,file="Reverse_Ecology_Best_RF_Predictions.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
-
-save.image("Reverse_Ecology_RF.RData")
+image_outname<-paste(prefix,"_Reverse_Ecology_RF.RData",sep="")
+save.image(image_outname)
 
 quit(status=1)
