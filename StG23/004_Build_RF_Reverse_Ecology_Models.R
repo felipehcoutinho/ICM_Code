@@ -150,4 +150,4 @@ write.table(best_importance_vals,file=best_imps_outname,sep="\t",append=FALSE,ro
 image_outname<-paste(prefix,"_Reverse_Ecology_RF.RData",sep="")
 save.image(image_outname)
 
-quit(status=1)
+quit(status=0)

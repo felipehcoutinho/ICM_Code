@@ -84,4 +84,4 @@ ylab("Relative Predictor Importance")
 bxp_outname<-paste("Reverse_Ecology_Best_RF_Relative_Importance_",prefix,"_by_",group_var,"_Boxplots.pdf",sep="")
 ggsave(bxp_outname,plot=figX,device=cairo_pdf,width=22,height=6,pointsize=8)
 
-quit(status=1)
+quit(status=0)
