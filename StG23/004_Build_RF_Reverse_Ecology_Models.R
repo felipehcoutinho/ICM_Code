@@ -21,17 +21,18 @@ load_defaults<-FALSE
 if(load_defaults == TRUE) {
 	response_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/Marine_Viral_Communities_Sample_Metadata_Updated_with_Guidi.tsv"#"/mnt/lustre/scratch/fcoutinho/StG_23/Metadata/TARA_Salazar_19_MGs_Metadata.tsv"
 	response_variables<-c("Mean.Flux.at.150m","NPP.8d.VGPM..mgC.m2.day.")#strsplit("Temperature,Oxygen,ChlorophyllA,Salinity,Iron.5m,Ammonium.5m",",")[[1]]
-	predictor_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/StG23_Viruses_Min_Prev_50_Raw_Abundance.tsv"#"/mnt/lustre/scratch/fcoutinho/StG_23/Prokaryotes/Abundance/RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_Species_Cluster.tsv"
+	predictor_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/Head_10K_Percentage_Abundance_NA.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/Head_10K_Percentage_Abundance_NA.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/Head_10K_RPKM_Abundance_NA.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/StG23_Viruses_Min_Prev_100_Raw_Abundance.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/Percentage_Abundance_NA.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/StG23_Viruses_Min_Prev_50_Raw_Abundance.tsv"#"/mnt/lustre/scratch/fcoutinho/StG_23/Prokaryotes/Abundance/RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_Species_Cluster.tsv"
 	max_rmse<-100000
-	cor_cutoff<-0.5
-	tree_num<-5000
+	cor_cutoff<-0.7
+	tree_num<-1000
 	var_tries<-500
 	node_size<-1
 	threads<-47
-	train_iters<-3
+	train_iters<-1
+	prefix<-"Defaults_Raw_10k"#"Defaults_Perc_10k"#"Defaults_RPKM_10k"
 }
 
-#Load and filter predictor data (i.e. the sampletaxon abundance table)
+#Load and filter predictor data (i.e. the sampleXtaxon abundance table)
 raw_predictor_df<-read.table(file=predictor_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE,row.names=1)
 
 z_predictor_df<-raw_predictor_df
@@ -41,7 +42,7 @@ t_z_predictor_df<-as.data.frame(t(z_predictor_df))
 predictor_variables<-colnames(t_z_predictor_df)
 #summary(z_predictor_df)
 
-#Load and filter response data (i.e. the sample metdata table)
+#Load and filter response data (i.e. the sample metadata table)
 raw_response_df<-read.table(file=response_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,row.names=1,check.names=FALSE)
 
 z_response_df<-subset(raw_response_df,select=response_variables)
@@ -82,7 +83,7 @@ for (resp_var in response_variables) {
 		train_pred_df<-subdata[trainIndex, c(predictor_variables)]
 
 		val_resp_df<-subdata[-trainIndex, resp_var]
-		val_pred_df<-subdata[-trainIndex, c(predictor_variables) ]
+		val_pred_df<-subdata[-trainIndex, c(predictor_variables)]
 		
 		#Train a  model using the training data
 		train_rf_model<-ranger(y=train_resp_df, x=train_pred_df, num.trees=tree_num, mtry=var_tries, write.forest=TRUE,probability=FALSE,importance="none",min.node.size=node_size,num.threads=threads)
