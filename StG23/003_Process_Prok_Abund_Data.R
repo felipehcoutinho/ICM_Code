@@ -69,3 +69,10 @@ srep_adb_df<-dcast(f_m_srep_abd_sums_df,Taxon ~ Sample,value.var="Abundance",fun
 #summary(srep_adb_df)
 
 write.table(srep_adb_df,file=output_file,sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
+
+#Print transposed df
+srep_adb_df<-read.table(file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,row.names=1,check.names=FALSE)
+dim(srep_adb_df)
+summary(srep_adb_df)
+write.table(as.data.frame(t(srep_adb_df)),file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv",sep="\t",append=FALSE,row.names=TRUE,col.names=NA,quote=FALSE)
+system("cut -f 1-11 Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv | head > short.tsv")
