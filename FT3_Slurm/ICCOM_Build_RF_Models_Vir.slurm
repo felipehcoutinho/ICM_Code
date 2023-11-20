@@ -18,18 +18,18 @@
 module load cesga/system miniconda3/22.11.1-1
 conda activate /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Conda_Envs/basic
 
-cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOM/
+cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/
 
 pred_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/RPKM_Abundance_NA.tsv" #"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/Head_10K_RPKM_Abundance_NA.tsv" #
 resp_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/Marine_Viral_Communities_Sample_Metadata_Updated_with_Guidi.tsv"
 prefix="TestRFVirRPKM"
-resp_vars="Temperature Salinity Oxygen Chlorophyll_A Iron_5m Ammonium_5m"
+resp_vars="Temperature Salinity Oxygen Chlorophyll_A Iron_5m Ammonium_5m Mean.Flux.at.150m NPP.8d.VGPM..mgC.m2.day."
 pred_vars=""
 prd_idx="Sequence"
 rsp_idx="MG_UID"
 threads=47
 
-time python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
+python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
 --response_table $resp_file \
 --predictor_table $pred_file \
 --response_vars $resp_vars \
@@ -38,4 +38,8 @@ time python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.
 --transpose_predictors True \
 --build_rf True \
 --threads $threads \
---prefix $prefix &
+--min_pred_prev 10 \
+--k_cv 0 \
+--prefix $prefix
+
+#--z_transform False \
