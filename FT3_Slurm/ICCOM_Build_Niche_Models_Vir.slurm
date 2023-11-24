@@ -4,7 +4,7 @@
 #############################################
 # JOB INFO
 
-#SBATCH --time=00-02:00:00
+#SBATCH --time=00-06:00:00
 #SBATCH --job-name=ANN_Niche_Vir_RPKM
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
@@ -22,7 +22,7 @@ cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/
 
 resp_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/RPKM_Abundance_NA.tsv" #"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/Head_10K_RPKM_Abundance_NA.tsv" #
 pred_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/Marine_Viral_Communities_Sample_Metadata_Updated_with_Guidi.tsv"
-prefix="TestANNVirRPKM"
+prefix="TestANNVirRPKM_Hyperp_Search"
 pred_vars="Temperature Salinity Oxygen Chlorophyll_A Iron_5m Ammonium_5m"
 resp_vars=""
 rsp_idx="Sequence"
@@ -37,6 +37,8 @@ python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
 --predictor_index $prd_idx \
 --transpose_response True \
 --build_ann True \
+--min_resp_prev 50 \
+--z_transform True \
 --threads $threads \
 --prefix $prefix
 

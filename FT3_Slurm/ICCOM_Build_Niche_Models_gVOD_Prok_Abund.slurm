@@ -26,8 +26,12 @@ pred_vars="Depth_m Temperature Salinity PO4_M"
 resp_vars="Viruses_per_ml Prokaryotes_per_ml Chlorophyll_a_g_per_l" #Prokaryotes_per_ml   #Synechococcus_per_ml Prochlorococcus_per_ml
 rspprd_idx="No"
 threads=8
+
+
+prefix="TestgVOD_V_Only"
+resp_vars="Viruses_per_ml"
 python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
---resp_pred_table $resp_file \
+--resp_pred_table $resp_pred_file \
 --response_vars $resp_vars \
 --predictor_vars $pred_vars \
 --resp_pred_index $rspprd_idx \
@@ -36,10 +40,8 @@ python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
 --build_ann True \
 --prefix $prefix
 
-prefix="TestgVOD_V_Only_rmse"
-resp_vars="Viruses_per_ml" #Prokaryotes_per_ml   #Synechococcus_per_ml Prochlorococcus_per_ml
 python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
---resp_pred_table $resp_file \
+--resp_pred_table $resp_pred_file \
 --response_vars $resp_vars \
 --predictor_vars $pred_vars \
 --resp_pred_index $rspprd_idx \
@@ -47,11 +49,12 @@ python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
 --threads $threads \
 --build_ann True \
 --prefix $prefix
+
 
 prefix="TestgVOD_P_Only"
 resp_vars="Prokaryotes_per_ml" #Prokaryotes_per_ml   #Synechococcus_per_ml Prochlorococcus_per_ml
 python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
---resp_pred_table $resp_file \
+--resp_pred_table $resp_pred_file \
 --response_vars $resp_vars \
 --predictor_vars $pred_vars \
 --resp_pred_index $rspprd_idx \
@@ -60,9 +63,3 @@ python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
 --build_ann True \
 --prefix $prefix
 
-
-
-# --predictor_table $pred_file \
-# --response_table $resp_file \
-# --response_index $rsp_idx \
-# --predictor_index $prd_idx \
