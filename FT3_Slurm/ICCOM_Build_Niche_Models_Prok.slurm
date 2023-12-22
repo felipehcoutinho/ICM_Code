@@ -23,7 +23,7 @@ cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/
 resp_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv" #"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv" #"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Top100_Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv" #"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv"
 pred_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/TARA_MGs_Paired_With_Salazar_Data_Info+Metadata_Updated_with_Guidi.tsv"
 test_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/TARA_MGs_Paired_With_Salazar_Data_Info+Metadata_Updated_with_Guidi_Scenario_Warming+3.tsv"
-prefix="ANNProkZ"
+prefix="ProkZ"
 pred_vars="Temperature Oxygen ChlorophyllA Salinity Iron.5m Ammonium.5m"
 #resp_vars="OceanDNA-a1001  OceanDNA-a1038  OceanDNA-a1061  OceanDNA-a1068  OceanDNA-a1070  OceanDNA-a1075  OceanDNA-a1079  OceanDNA-a1082  OceanDNA-a1128  OceanDNA-a113  OceanDNA-a1143 OceanDNA-a1795 OceanDNA-a1744 OceanDNA-a1301"
 #resp_vars="OceanDNA-a1795 OceanDNA-a1744 OceanDNA-a1301"

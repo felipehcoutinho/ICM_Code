@@ -10,6 +10,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import KFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
+from sklearn.inspection import permutation_importance
+import lime
+import lime.lime_tabular
+
 from collections import defaultdict
 import scipy.stats
 import pickle
@@ -58,32 +62,73 @@ def central():
         #full_MOR = build_ann(pred_df=pred_df,resp_df=resp_df)
         (train_performance_df, train_predictions_df) = calc_performance_metrics(mor_model=full_MOR, pred_df=pred_df,resp_df=resp_df, model_type=model_type, dataset="Training", print_perfo=True, print_preds=True, rvar_names=valid_resp_var_names,resp_scaler=resp_scaler)
         #Calculate predictor importances
-        calc_predictor_importances(mor_model=full_MOR,rvar_names=valid_resp_var_names,pred_df=pred_df,model_type=model_type)
+        calc_predictor_importances(mor_model=full_MOR,rvar_names=valid_resp_var_names,pred_df=pred_df,resp_df=resp_df,model_type=model_type)
         for test_file in args.test_predictor_table:
             print(f"\tCalculating predictions for test set: {test_file}")
             (test_df, valid_test_var_names,test_scaler) = prepare_single_df(type="predictor",df_file=test_file,min_var_prev=args.min_pred_prev,idx_var=args.predictor_index,transpose=args.transpose_predictors,z_transform=args.z_transform,valid_var_names=valid_pred_var_names, scaler=pred_scaler)
             test_predictions_df = get_model_predictions(mor_model=full_MOR, pred_df=test_df, dataset="Testing", model_type=model_type, print_preds=True, rvar_names=valid_resp_var_names, resp_scaler=resp_scaler)
 
-def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,model_type=None):
-    #Calculate predictor importances for each model in the MOR model
-    print("Calculating predictor importances")
-    idx = 0
-    imp_dfs_list = []
-    for rf in mor_model.estimators_:
-        #Calculate the relative importance of predictors
-        rname = rvar_names[idx]
-        #Calculate relative importance of predictor variables
-        pred_imps = rf.feature_importances_
-        model_imp_df = pd.DataFrame(pred_imps)
-        model_imp_df.index.name = 'Predictor_Index'
-        model_imp_df.rename(columns={0: rname},inplace=True)
-        model_imp_df['Predictor_Variable'] = pred_df.columns
-        model_imp_df.set_index('Predictor_Variable',inplace=True)
-        imp_dfs_list.append(model_imp_df)
-        idx = idx + 1
-    full_imp_df = pd.concat(imp_dfs_list,axis=1)
-    output_dataframe_file = args.prefix + model_type + "_Predictor_Importance.tsv"
-    full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')    
+def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,resp_df=None,model_type=None):
+    if (model_type == "RF"):
+        #Calculate gini predictor importances for each RF model in the MOR model
+        print("Calculating gini predictor importances")
+        idx = 0
+        imp_dfs_list = []
+        for rf in mor_model.estimators_:
+            #Calculate the relative importance of predictors
+            rname = rvar_names[idx]
+            #Calculate relative importance of predictor variables
+            pred_imps = rf.feature_importances_
+            model_imp_df = pd.DataFrame(pred_imps)
+            model_imp_df.index.name = 'Predictor_Index'
+            model_imp_df.rename(columns={0: rname},inplace=True)
+            model_imp_df['Predictor_Variable'] = pred_df.columns
+            model_imp_df.set_index('Predictor_Variable',inplace=True)
+            imp_dfs_list.append(model_imp_df)
+            idx = idx + 1
+        full_imp_df = pd.concat(imp_dfs_list,axis=1)
+        output_dataframe_file = args.prefix + model_type + "_Predictor_Gini_Importance.tsv"
+        full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
+
+        #Calculate permutation predictor importances for each model in the MOR model
+        print("Calculating permutation predictor importances")
+        idx = 0
+        imp_dfs_list = []
+        for rf in mor_model.estimators_:
+            #Calculate the relative importance of predictors
+            rname = rvar_names[idx]
+            #Calculate relative importance of predictor variables
+            pred_imps = permutation_importance(estimator=rf, X=pred_df, y=resp_df[rname], n_repeats=3,random_state=0)
+            model_imp_df = pd.DataFrame(pred_imps.importances_mean)
+            model_imp_df.index.name = 'Predictor_Index'
+            model_imp_df.rename(columns={0: rname},inplace=True)
+            model_imp_df['Predictor_Variable'] = pred_df.columns
+            model_imp_df.set_index('Predictor_Variable',inplace=True)
+            imp_dfs_list.append(model_imp_df)
+            idx = idx + 1
+        full_imp_df = pd.concat(imp_dfs_list,axis=1)
+        output_dataframe_file = args.prefix + model_type + "_Predictor_Permutation_Importance.tsv"
+        full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
+
+    elif (model_type == "ANN"):
+        idx = 0
+        imp_dfs_list = []
+        for ann in mor_model.estimators_:
+            #Calculate the relative importance of predictors .to_numpy()
+            #lime.lime_tabular.LimeTabularExplainer(train, feature_names=boston.feature_names, class_names=['price'], categorical_features=categorical_features, verbose=True, mode='regression')
+            #get the values of the response variable  in resp_df and donvert them to a numpy array
+            rname = rvar_names[idx]
+            print(rname)
+            resp_arr = resp_df[rname].to_numpy()
+            #resp_arr.describe()
+            pred_arr = pred_df.to_numpy()
+            #pred_arr.describe()
+            explainer = lime.lime_tabular.LimeTabularExplainer(training_data=pred_arr, feature_names=pred_df.columns, class_names=[rname], mode='regression', verbose=True)
+            exp = explainer.explain_instance(pred_arr[99], ann.predict)
+            print(exp.as_list())
+            idx = idx + 1
+
+        
 
 def get_model_predictions(mor_model=None, pred_df=None, dataset="NA", print_preds=False,  resp_df=None, model_type=None, rvar_names=None, resp_scaler=None):
     #Generarte predictions for the response variables based on the output of the received model and the passed predictors
@@ -93,6 +138,7 @@ def get_model_predictions(mor_model=None, pred_df=None, dataset="NA", print_pred
     predictions_df.index.name = pred_df.index.name
     #If the response variables were Z-transformed, the predictions must be back-transformed to the original scale
     if (resp_scaler != None):
+        print(f"Back-transforming {dataset} predictions to original scale")
         predictions_df = pd.DataFrame(resp_scaler.inverse_transform(predictions_df), columns=rvar_names, index=pred_df.index)
     #Merge the predictions with the expected/true values of the response variables in resp_df indicating which is each. This must be done after the performance metrics are calculated so that the DF maintain the correc dimensions
     predictions_df["Data_Type"] = "Predicted"
@@ -133,8 +179,8 @@ def build_model(resp_df=None, pred_df=None, model_type=None):
         model = MLPRegressor(random_state=42,learning_rate_init=0.05, max_iter=500, hidden_layer_sizes=(5,))
         param_grid={'estimator__learning_rate_init': args.hpt_ann_learning_rate_init, 'estimator__max_iter': args.hpt_ann_max_iter, 'estimator__hidden_layer_sizes': args.hpt_ann_n_neurons}
     elif (model_type == "RF"):
-        model = RandomForestRegressor(random_state=42, n_jobs=1, max_depth =  2, max_leaf_nodes = 5, min_impurity_decrease = 1.0, n_estimators = 500)
-        param_grid={'estimator__n_estimators': args.hpt_rf_trees, 'estimator__max_leaf_nodes': [2,5,10,100,1000], 'estimator__max_depth': [2,5,10,100,1000],'estimator__min_impurity_decrease': [0.0, 0.1, 0.5, 1.0]}
+        model = RandomForestRegressor(random_state=42, n_jobs=1, max_depth =  3, max_leaf_nodes = None, min_impurity_decrease = 0.5, n_estimators = 100, max_samples = 0.5, max_features="sqrt")
+        param_grid={'estimator__n_estimators': args.hpt_rf_trees, 'estimator__max_leaf_nodes': [2,5,10,100,1000], 'estimator__max_depth': [2,5,10,100,1000],'estimator__min_impurity_decrease': [0.0, 0.1, 0.5, 1.0],'estimator__max_samples': [0.25, 0.5, 0.75, 1.0]}
     #Instantiate a MultiOutputRegressor object to build a model for each response variable
     #Here there is some room for improvemnt on multithreading when no HPT will be performed, the multithreading should be done at the level of the RF model by setting n_jobs = args.threads, but when it is performed, the multithreading should be done at the level of the GridSearchCV. Since the RFs are fast regardless, this is not a priority
     MOR = MultiOutputRegressor(model,n_jobs=1)
