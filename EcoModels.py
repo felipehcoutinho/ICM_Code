@@ -11,8 +11,11 @@ from sklearn.model_selection import KFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.inspection import permutation_importance
-import lime
-import lime.lime_tabular
+#import lime
+#import lime.lime_tabular
+#import lime.submodular_pick
+import shap
+import matplotlib.pyplot as plt
 
 from collections import defaultdict
 import scipy.stats
@@ -109,24 +112,120 @@ def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,resp_df
         full_imp_df = pd.concat(imp_dfs_list,axis=1)
         output_dataframe_file = args.prefix + model_type + "_Predictor_Permutation_Importance.tsv"
         full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
-
+    #SHAP
     elif (model_type == "ANN"):
         idx = 0
         imp_dfs_list = []
+        rimp_dfs_list = []
+        mrimp_dfs_list = []
         for ann in mor_model.estimators_:
-            #Calculate the relative importance of predictors .to_numpy()
-            #lime.lime_tabular.LimeTabularExplainer(train, feature_names=boston.feature_names, class_names=['price'], categorical_features=categorical_features, verbose=True, mode='regression')
-            #get the values of the response variable  in resp_df and donvert them to a numpy array
             rname = rvar_names[idx]
-            print(rname)
-            resp_arr = resp_df[rname].to_numpy()
-            #resp_arr.describe()
-            pred_arr = pred_df.to_numpy()
-            #pred_arr.describe()
-            explainer = lime.lime_tabular.LimeTabularExplainer(training_data=pred_arr, feature_names=pred_df.columns, class_names=[rname], mode='regression', verbose=True)
-            exp = explainer.explain_instance(pred_arr[99], ann.predict)
-            print(exp.as_list())
+            explainer = shap.KernelExplainer(ann.predict,shap.sample(pred_df,10),feature_names=pred_df.columns)
+            shap_values = explainer.shap_values(pred_df)
+            model_imp_df = pd.DataFrame(shap_values)
+            #model_imp_df.rename(columns=pred_df.columns,inplace=True)
+            model_imp_df.index = pred_df.index
+            model_imp_df.columns=pred_df.columns
+            #model_imp_df["Response_Variable"] = rname
+            #model_rimp_df = model_imp_df.copy()
+            #Calculate relative importance of predictor variables
+            #model_rimp_df["Row_Abs_Sum"] = model_rimp_df.abs().sum(axis=0)
+            #print(model_imp_df.describe())
+            #Divide the absolute value of each predictor by the sum of the absolute values of all predictors for each row
+            #print(model_imp_df.abs().sum(axis=1))
+            model_rimp_df = (model_imp_df.div(model_imp_df.abs().sum(axis=1),axis=0)) * 100
+            #print(model_rimp_df.describe())
+            #model_mrimp_df = pd.DataFrame(model_rimp_df.mean(axis=0))
+            model_mrimp_df =  pd.DataFrame(model_rimp_df.mean(axis=0)) 
+            #model_mrimp_df["Response_Variable"] = rname
+            model_mrimp_df = model_mrimp_df.transpose()
+            model_mrimp_df["Response_Variable"] = rname
+            print(model_mrimp_df.describe())
+            model_mrimp_df.set_index('Response_Variable',inplace=True)
+            model_imp_df["Response_Variable"] = rname
+            model_rimp_df["Response_Variable"] = rname
+
+            imp_dfs_list.append(model_imp_df)
+            rimp_dfs_list.append(model_rimp_df)
+            mrimp_dfs_list.append(model_mrimp_df)
+            #print(shap_values)
+            #Save generated plot to file
+            #plot_handle.write(shap.plots.bar(shap_values[0], show=False))
+            #plot_handle.close()
+            #shap.force_plot(explainer.expected_value[0], shap_values[0], pred_df)
+            #plot_obj = shap.plots.bar(shap_values[0], show=False)
+            outfile_name = f'SHAP_Importance_Summary_Barplot_{rname}.png'
+            #plot_obj = shap.summary_plot(shap_values = shap_values, plot_type="bar")
+            fig = shap.summary_plot(shap_values = shap_values, plot_type="bar", features=pred_df)
+            plt.savefig(outfile_name)
+            # outfile_name = f'SHAP_Importance_Beeswarm_Plot_{rname}.png'
+            # shap_values = explainer(pred_df)
+            # fig = shap.plots.beeswarm(shap_values)
+            # plt.savefig(outfile_name)
+            #plot_handle = open(f'SHAP_Importance_Barplot_{rname}.html','w')
+            #plot_handle.write(plot_obj)
+            #plot_handle.close()
+            #shap.save_html(outfile_name, plot_obj)
             idx = idx + 1
+        full_imp_df = pd.concat(imp_dfs_list,axis=0)
+        #full_imp_df = full_imp_df.transpose()
+        #full_imp_df.set_index('Response_Variable',inplace=True)
+        output_dataframe_file = args.prefix + model_type + "_Predictor_SHAP_Importance.tsv"
+        full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
+
+        full_rimp_df = pd.concat(rimp_dfs_list,axis=0)
+        #full_rimp_df = full_rimp_df.transpose()
+        #full_rimp_df.set_index('Response_Variable',inplace=True)
+        output_dataframe_file = args.prefix + model_type + "_Predictor_SHAP_Relative_Importance.tsv"
+        full_rimp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
+
+        
+        full_mrimp_df = pd.concat(mrimp_dfs_list,axis=0)
+        #full_mrimp_df = full_mrimp_df.transpose()
+        #full_mrimp_df.set_index('Response_Variable',inplace=True)
+        output_dataframe_file = args.prefix + model_type + "_Predictor_SHAP_Mean_Relative_Importance.tsv"
+        full_mrimp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
+
+    
+    # #LIME
+    # elif (model_type == "ANN"):
+    #     idx = 0
+    #     imp_dfs_list = []
+    #     for ann in mor_model.estimators_:
+    #         #Calculate the relative importance of predictors .to_numpy()
+    #         #lime.lime_tabular.LimeTabularExplainer(train, feature_names=boston.feature_names, class_names=['price'], categorical_features=categorical_features, verbose=True, mode='regression')
+    #         #get the values of the response variable  in resp_df and donvert them to a numpy array
+    #         rname = rvar_names[idx]
+    #         print(rname)
+    #         resp_arr = resp_df[rname].to_numpy()
+    #         #resp_arr.describe()
+    #         pred_arr = pred_df.to_numpy()
+    #         #pred_arr.describe()
+    #         explainer = lime.lime_tabular.LimeTabularExplainer(training_data=pred_arr, feature_names=pred_df.columns, class_names=[rname], mode='regression', discretize_continuous=False, verbose=True)
+    #         sp_explainer = lime.submodular_pick.SubmodularPick(explainer, pred_arr, predict_fn=ann.predict, method='full', num_exps_desired=1, num_features=10)
+    #         #exp_count = len(sp_explainer.explanations[0].as_list())
+    #         #print(f"Explanations count: {exp_count}")
+    #         #print(sp_explainer.explanations[0].as_list())
+    #         #print(sp_explainer.sp_explanations[0].as_list())
+    #         pred_imps = sp_explainer.sp_explanations[0].as_list()
+    #         model_imp_df = pd.DataFrame(pred_imps)
+    #         model_imp_df.index.name = 'Predictor_Index'
+    #         model_imp_df.rename(columns={0: 'Predictor_Variable', 1:rname},inplace=True)
+    #         #model_imp_df['Predictor_Variable'] = pred_df.columns
+    #         model_imp_df.set_index('Predictor_Variable',inplace=True)
+    #         imp_dfs_list.append(model_imp_df)
+    #         # exp = explainer.explain_instance(pred_arr[99], ann.predict)
+    #         # print(exp.as_list())
+    #         # exp = explainer.explain_instance(pred_arr[101], ann.predict)
+    #         # print(exp.as_list())
+    #         # exp = explainer.explain_instance(pred_arr[101], ann.predict)
+    #         # print(exp.as_list())
+    #         idx = idx + 1
+    #     full_imp_df = pd.concat(imp_dfs_list,axis=1)
+    #     full_imp_df = full_imp_df.transpose()
+    #     full_imp_df.set_index('Response_Variable',inplace=True)
+    #     output_dataframe_file = args.prefix + model_type + "_Predictor_LIME_Importance.tsv"
+    #     full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
 
         
 

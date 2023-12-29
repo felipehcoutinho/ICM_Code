@@ -5,7 +5,7 @@
 # JOB INFO
 
 #SBATCH --time=00-00:10:00
-#SBATCH --job-name=ANN_Niche_Prok_gVOD
+#SBATCH --job-name=ANN_Niche_Prok+Vir_gVOD
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1G
@@ -16,7 +16,7 @@
 
 ##############################################
 module load cesga/system miniconda3/22.11.1-1
-conda activate /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Conda_Envs/basic
+conda activate /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Conda_Envs/ml
 
 cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/
 
