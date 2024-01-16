@@ -3,17 +3,17 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import RepeatedKFold
+from sklearn.model_selection import KFold
+from sklearn.model_selection import GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import KFold
-from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.inspection import permutation_importance
-#import lime
-#import lime.lime_tabular
-#import lime.submodular_pick
+from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error
+#from sklearn.metrics import explained_variance_score
 import shap
 import matplotlib.pyplot as plt
 
@@ -40,8 +40,9 @@ parser.add_argument("--response_index", help="Response variables tables index co
 parser.add_argument("--predictor_index", help="Predictor variables tables index column name. If not provided assumed to be the first column", type = str)
 parser.add_argument("--resp_pred_index", help="Predictor variables tables index column name. If not provided assumed to be the first column", type = str)
 parser.add_argument("--sep_table", help="Input tables separator charcter", nargs=1, default="\t", type = str)
+parser.add_argument("--skip_predictor_importance", help="Flag to disable predictor importance calculations after training models", default = False, type = bool)
 parser.add_argument("--prefix", help="Prefix of output file names", default="EcoModels", type = str)
-parser.add_argument("--z_transform", help="Flag to Z-transform values of predictor and response variables before training models", default=False, type = bool)
+parser.add_argument("--z_transform", help="Flag to Z-transform values of predictor and response variables before training models", default = False, type = bool)
 parser.add_argument("--threads", help="Number of threads to be used during analysis", default=1, type = int)
 parser.add_argument("--build_models", help="Type of models to build. Requieres at least one of: ANN, RF", default=None, type = str,  nargs="+")
 parser.add_argument("--min_pred_prev", help="Minimum number of non-zero values required for variables in the preditor DF to be include in models", default=1, type = int)
@@ -64,8 +65,10 @@ def central():
         full_MOR = build_model(pred_df=pred_df,resp_df=resp_df,model_type=model_type)
         #full_MOR = build_ann(pred_df=pred_df,resp_df=resp_df)
         (train_performance_df, train_predictions_df) = calc_performance_metrics(mor_model=full_MOR, pred_df=pred_df,resp_df=resp_df, model_type=model_type, dataset="Training", print_perfo=True, print_preds=True, rvar_names=valid_resp_var_names,resp_scaler=resp_scaler)
-        #Calculate predictor importances
-        calc_predictor_importances(mor_model=full_MOR,rvar_names=valid_resp_var_names,pred_df=pred_df,resp_df=resp_df,model_type=model_type)
+        if (args.skip_predictor_importance == False):
+            #Calculate predictor importances
+            calc_predictor_importances(mor_model=full_MOR,rvar_names=valid_resp_var_names,pred_df=pred_df,resp_df=resp_df,model_type=model_type)
+        #Calculate predictions for test sets if provided
         for test_file in args.test_predictor_table:
             print(f"\tCalculating predictions for test set: {test_file}")
             (test_df, valid_test_var_names,test_scaler) = prepare_single_df(type="predictor",df_file=test_file,min_var_prev=args.min_pred_prev,idx_var=args.predictor_index,transpose=args.transpose_predictors,z_transform=args.z_transform,valid_var_names=valid_pred_var_names, scaler=pred_scaler)
@@ -90,7 +93,7 @@ def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,resp_df
             imp_dfs_list.append(model_imp_df)
             idx = idx + 1
         full_imp_df = pd.concat(imp_dfs_list,axis=1)
-        output_dataframe_file = args.prefix + model_type + "_Predictor_Gini_Importance.tsv"
+        output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_Gini_Importance.tsv"
         full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
 
         #Calculate permutation predictor importances for each model in the MOR model
@@ -101,134 +104,72 @@ def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,resp_df
             #Calculate the relative importance of predictors
             rname = rvar_names[idx]
             #Calculate relative importance of predictor variables
-            pred_imps = permutation_importance(estimator=rf, X=pred_df, y=resp_df[rname], n_repeats=3,random_state=0)
-            model_imp_df = pd.DataFrame(pred_imps.importances_mean)
+            pred_imps = permutation_importance(estimator=rf, X=pred_df, y=resp_df[rname], n_repeats=5, random_state=42, max_samples=0.5, scoring="neg_root_mean_squared_error", n_jobs=args.threads)
+            model_imp_df = pd.DataFrame(pred_imps.importances) #Can also directely get means with pred_imps.importances_mean
             model_imp_df.index.name = 'Predictor_Index'
-            model_imp_df.rename(columns={0: rname},inplace=True)
+            for col in model_imp_df.columns:
+                model_imp_df.rename(columns={col: "Iteration_"+str(col)},inplace=True)
+            #model_imp_df.rename(columns={0: rname},inplace=True)
             model_imp_df['Predictor_Variable'] = pred_df.columns
             model_imp_df.set_index('Predictor_Variable',inplace=True)
+            model_imp_df['Response_Variable'] = rname
+            #print(model_imp_df.describe())
             imp_dfs_list.append(model_imp_df)
             idx = idx + 1
-        full_imp_df = pd.concat(imp_dfs_list,axis=1)
-        output_dataframe_file = args.prefix + model_type + "_Predictor_Permutation_Importance.tsv"
+        full_imp_df = pd.concat(imp_dfs_list,axis=0)
+        output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_Permutation_Importance.tsv"
         full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
     #SHAP
-    elif (model_type == "ANN"):
+    if ((model_type == "ANN") or (model_type == "RF")):
+        print("Calculating SHAP predictor importances for models")
         idx = 0
         imp_dfs_list = []
         rimp_dfs_list = []
         mrimp_dfs_list = []
-        for ann in mor_model.estimators_:
+        #For each model, calculate SHAP predictor importance per sample, the SHAP relative predictor importance per sample, then calculate the mean of the relative SHAP importance values of each predictor, per response variable across all samples
+        for single_model in mor_model.estimators_:
             rname = rvar_names[idx]
-            explainer = shap.KernelExplainer(ann.predict,shap.sample(pred_df,10),feature_names=pred_df.columns)
-            shap_values = explainer.shap_values(pred_df)
+            explainer = shap.KernelExplainer(single_model.predict,shap.kmeans(pred_df,10),feature_names=pred_df.columns) #for a random subsampling use: shap.utils.sample instead of shap.kmeans
+            #Generate DF with raw importance valeus from shap explainer output
+            shap_values = explainer.shap_values(pred_df,nsamples=100)
             model_imp_df = pd.DataFrame(shap_values)
-            #model_imp_df.rename(columns=pred_df.columns,inplace=True)
             model_imp_df.index = pred_df.index
             model_imp_df.columns=pred_df.columns
-            #model_imp_df["Response_Variable"] = rname
-            #model_rimp_df = model_imp_df.copy()
-            #Calculate relative importance of predictor variables
-            #model_rimp_df["Row_Abs_Sum"] = model_rimp_df.abs().sum(axis=0)
+            #print(f"Description of absolute importance for response variable: {rname}:")
             #print(model_imp_df.describe())
-            #Divide the absolute value of each predictor by the sum of the absolute values of all predictors for each row
-            #print(model_imp_df.abs().sum(axis=1))
+            
+            #Generate DF with relative importance values raw importance DF
             model_rimp_df = (model_imp_df.div(model_imp_df.abs().sum(axis=1),axis=0)) * 100
+            #print(f"Description of relative importance for response variable: {rname}:")
             #print(model_rimp_df.describe())
-            #model_mrimp_df = pd.DataFrame(model_rimp_df.mean(axis=0))
-            model_mrimp_df =  pd.DataFrame(model_rimp_df.mean(axis=0)) 
-            #model_mrimp_df["Response_Variable"] = rname
+
+            #Generate DF with median relative importance values from relative importance DF
+            model_mrimp_df = pd.DataFrame(model_rimp_df.median(axis=0))
             model_mrimp_df = model_mrimp_df.transpose()
             model_mrimp_df["Response_Variable"] = rname
-            print(model_mrimp_df.describe())
-            model_mrimp_df.set_index('Response_Variable',inplace=True)
             model_imp_df["Response_Variable"] = rname
-            model_rimp_df["Response_Variable"] = rname
-
+            model_rimp_df["Response_Variable"] = rname 
+            model_mrimp_df.set_index('Response_Variable',inplace=True)
+            
             imp_dfs_list.append(model_imp_df)
             rimp_dfs_list.append(model_rimp_df)
             mrimp_dfs_list.append(model_mrimp_df)
-            #print(shap_values)
-            #Save generated plot to file
-            #plot_handle.write(shap.plots.bar(shap_values[0], show=False))
-            #plot_handle.close()
-            #shap.force_plot(explainer.expected_value[0], shap_values[0], pred_df)
-            #plot_obj = shap.plots.bar(shap_values[0], show=False)
-            outfile_name = f'SHAP_Importance_Summary_Barplot_{rname}.png'
-            #plot_obj = shap.summary_plot(shap_values = shap_values, plot_type="bar")
-            fig = shap.summary_plot(shap_values = shap_values, plot_type="bar", features=pred_df)
-            plt.savefig(outfile_name)
-            # outfile_name = f'SHAP_Importance_Beeswarm_Plot_{rname}.png'
-            # shap_values = explainer(pred_df)
-            # fig = shap.plots.beeswarm(shap_values)
-            # plt.savefig(outfile_name)
-            #plot_handle = open(f'SHAP_Importance_Barplot_{rname}.html','w')
-            #plot_handle.write(plot_obj)
-            #plot_handle.close()
-            #shap.save_html(outfile_name, plot_obj)
             idx = idx + 1
+
+        #Merge the importance DFs from all models in the MOR model
         full_imp_df = pd.concat(imp_dfs_list,axis=0)
-        #full_imp_df = full_imp_df.transpose()
-        #full_imp_df.set_index('Response_Variable',inplace=True)
-        output_dataframe_file = args.prefix + model_type + "_Predictor_SHAP_Importance.tsv"
+        output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_SHAP_Importance.tsv"
         full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
 
         full_rimp_df = pd.concat(rimp_dfs_list,axis=0)
-        #full_rimp_df = full_rimp_df.transpose()
-        #full_rimp_df.set_index('Response_Variable',inplace=True)
-        output_dataframe_file = args.prefix + model_type + "_Predictor_SHAP_Relative_Importance.tsv"
+        output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_SHAP_Relative_Importance.tsv"
         full_rimp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
 
-        
         full_mrimp_df = pd.concat(mrimp_dfs_list,axis=0)
-        #full_mrimp_df = full_mrimp_df.transpose()
-        #full_mrimp_df.set_index('Response_Variable',inplace=True)
-        output_dataframe_file = args.prefix + model_type + "_Predictor_SHAP_Mean_Relative_Importance.tsv"
+        output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_SHAP_Median_Relative_Importance.tsv"
         full_mrimp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
 
-    
-    # #LIME
-    # elif (model_type == "ANN"):
-    #     idx = 0
-    #     imp_dfs_list = []
-    #     for ann in mor_model.estimators_:
-    #         #Calculate the relative importance of predictors .to_numpy()
-    #         #lime.lime_tabular.LimeTabularExplainer(train, feature_names=boston.feature_names, class_names=['price'], categorical_features=categorical_features, verbose=True, mode='regression')
-    #         #get the values of the response variable  in resp_df and donvert them to a numpy array
-    #         rname = rvar_names[idx]
-    #         print(rname)
-    #         resp_arr = resp_df[rname].to_numpy()
-    #         #resp_arr.describe()
-    #         pred_arr = pred_df.to_numpy()
-    #         #pred_arr.describe()
-    #         explainer = lime.lime_tabular.LimeTabularExplainer(training_data=pred_arr, feature_names=pred_df.columns, class_names=[rname], mode='regression', discretize_continuous=False, verbose=True)
-    #         sp_explainer = lime.submodular_pick.SubmodularPick(explainer, pred_arr, predict_fn=ann.predict, method='full', num_exps_desired=1, num_features=10)
-    #         #exp_count = len(sp_explainer.explanations[0].as_list())
-    #         #print(f"Explanations count: {exp_count}")
-    #         #print(sp_explainer.explanations[0].as_list())
-    #         #print(sp_explainer.sp_explanations[0].as_list())
-    #         pred_imps = sp_explainer.sp_explanations[0].as_list()
-    #         model_imp_df = pd.DataFrame(pred_imps)
-    #         model_imp_df.index.name = 'Predictor_Index'
-    #         model_imp_df.rename(columns={0: 'Predictor_Variable', 1:rname},inplace=True)
-    #         #model_imp_df['Predictor_Variable'] = pred_df.columns
-    #         model_imp_df.set_index('Predictor_Variable',inplace=True)
-    #         imp_dfs_list.append(model_imp_df)
-    #         # exp = explainer.explain_instance(pred_arr[99], ann.predict)
-    #         # print(exp.as_list())
-    #         # exp = explainer.explain_instance(pred_arr[101], ann.predict)
-    #         # print(exp.as_list())
-    #         # exp = explainer.explain_instance(pred_arr[101], ann.predict)
-    #         # print(exp.as_list())
-    #         idx = idx + 1
-    #     full_imp_df = pd.concat(imp_dfs_list,axis=1)
-    #     full_imp_df = full_imp_df.transpose()
-    #     full_imp_df.set_index('Response_Variable',inplace=True)
-    #     output_dataframe_file = args.prefix + model_type + "_Predictor_LIME_Importance.tsv"
-    #     full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
-
-        
-
+ 
 def get_model_predictions(mor_model=None, pred_df=None, dataset="NA", print_preds=False,  resp_df=None, model_type=None, rvar_names=None, resp_scaler=None):
     #Generarte predictions for the response variables based on the output of the received model and the passed predictors
     predictions = mor_model.predict(pred_df)
@@ -238,16 +179,19 @@ def get_model_predictions(mor_model=None, pred_df=None, dataset="NA", print_pred
     #If the response variables were Z-transformed, the predictions must be back-transformed to the original scale
     if (resp_scaler != None):
         print(f"Back-transforming {dataset} predictions to original scale")
-        predictions_df = pd.DataFrame(resp_scaler.inverse_transform(predictions_df), columns=rvar_names, index=pred_df.index)
-    #Merge the predictions with the expected/true values of the response variables in resp_df indicating which is each. This must be done after the performance metrics are calculated so that the DF maintain the correc dimensions
+        predictions_df = pd.DataFrame(resp_scaler.inverse_transform(predictions_df))#, columns=rvar_names, index=pred_df.index
+    #Merge the predictions with the expected/true values of the response variables in resp_df indicating which is each. This must be done after the performance metrics are calculated so that the DF maintains the correct dimensions
     predictions_df["Data_Type"] = "Predicted"
     predictions_df["Dataset"] = dataset
     if (resp_df):
         resp_df["Data_Type"] = "Measured"
         predictions_df = pd.concat([predictions_df, resp_df], axis=0)
     if (print_preds == True):
-        output_dataframe_file = args.prefix + model_type + dataset  + "_Models_Predicted_Values.tsv"
+        output_dataframe_file = args.prefix + "_" + model_type  + "_" + dataset + "_Models_Predicted_Values.tsv"
         predictions_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
+    # print(f"Shape of predictions DF: {predictions_df.shape}")
+    # print(f"Summary of predictions DF:",predictions_df.describe())
+    # print(f"Head of predictions DF:",predictions_df.head())
     return(predictions_df)
 
 def calc_performance_metrics(mor_model=None, pred_df=None, resp_df=None, model_type=None, dataset="NA", print_perfo=False, print_preds=False, rvar_names=None, resp_scaler=None):
@@ -258,8 +202,11 @@ def calc_performance_metrics(mor_model=None, pred_df=None, resp_df=None, model_t
     predictions_df = predictions_df[predictions_df["Data_Type"] == "Predicted"]
     #Calculate model performance metrics for each response variable in the MOR model
     for rvar in rvar_names:
-        model_info[rvar]["PearsonR"] = scipy.stats.pearsonr(predictions_df[rvar], resp_df[rvar])[0]
-        model_info[rvar]["RMSE"] = np.sqrt(np.mean((predictions_df[rvar] - resp_df[rvar].values.ravel())**2))
+        model_info[rvar]["Pearson_R2"] = scipy.stats.pearsonr(resp_df[rvar], predictions_df[rvar])[0]
+        model_info[rvar]["R2_Score"] = r2_score(resp_df[rvar], predictions_df[rvar])
+        #model_info[rvar]["Explained_Variance_Score"] = explained_variance_score(resp_df[rvar], predictions_df[rvar])
+        #model_info[rvar]["RMSE"] = np.sqrt(np.mean((predictions_df[rvar] - resp_df[rvar].values.ravel())**2))
+        model_info[rvar]["RMSE"] = mean_squared_error(resp_df[rvar], predictions_df[rvar], squared=False)
         #print(f"Response Variable: {rvar}, PearsonR: {model_info[rvar]['PearsonR']}, RMSE: {model_info[rvar]['RMSE']}")
     performance_df = pd.DataFrame.from_dict(model_info)
     performance_df = performance_df.transpose()
@@ -278,7 +225,8 @@ def build_model(resp_df=None, pred_df=None, model_type=None):
         model = MLPRegressor(random_state=42,learning_rate_init=0.05, max_iter=500, hidden_layer_sizes=(5,))
         param_grid={'estimator__learning_rate_init': args.hpt_ann_learning_rate_init, 'estimator__max_iter': args.hpt_ann_max_iter, 'estimator__hidden_layer_sizes': args.hpt_ann_n_neurons}
     elif (model_type == "RF"):
-        model = RandomForestRegressor(random_state=42, n_jobs=1, max_depth =  3, max_leaf_nodes = None, min_impurity_decrease = 0.5, n_estimators = 100, max_samples = 0.5, max_features="sqrt")
+        #IF bootstrap = True, must consider: max_samples = 0.5
+        model = RandomForestRegressor(random_state=42, n_jobs=1, max_depth =  None, max_leaf_nodes = None, min_impurity_decrease = 0.05, n_estimators = 500,  bootstrap=False, max_features=1.0)
         param_grid={'estimator__n_estimators': args.hpt_rf_trees, 'estimator__max_leaf_nodes': [2,5,10,100,1000], 'estimator__max_depth': [2,5,10,100,1000],'estimator__min_impurity_decrease': [0.0, 0.1, 0.5, 1.0],'estimator__max_samples': [0.25, 0.5, 0.75, 1.0]}
     #Instantiate a MultiOutputRegressor object to build a model for each response variable
     #Here there is some room for improvemnt on multithreading when no HPT will be performed, the multithreading should be done at the level of the RF model by setting n_jobs = args.threads, but when it is performed, the multithreading should be done at the level of the GridSearchCV. Since the RFs are fast regardless, this is not a priority

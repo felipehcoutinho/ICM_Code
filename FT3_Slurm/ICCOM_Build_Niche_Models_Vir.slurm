@@ -16,13 +16,13 @@
 
 ##############################################
 module load cesga/system miniconda3/22.11.1-1
-conda activate /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Conda_Envs/basic
+conda activate /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Conda_Envs/ml
 
 cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/
 
 resp_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/RPKM_Abundance_NA.tsv" #"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/Head_10K_RPKM_Abundance_NA.tsv" #
 pred_file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/Marine_Viral_Communities_Sample_Metadata_Updated_with_Guidi.tsv"
-prefix="TestANNVirRPKM_Hyperp_Search"
+prefix="VirZ"
 pred_vars="Temperature Salinity Oxygen Chlorophyll_A Iron_5m Ammonium_5m"
 resp_vars=""
 rsp_idx="Sequence"
@@ -36,7 +36,7 @@ python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
 --response_index $rsp_idx \
 --predictor_index $prd_idx \
 --transpose_response True \
---build_ann True \
+--build_models ANN \
 --min_resp_prev 50 \
 --z_transform True \
 --threads $threads \

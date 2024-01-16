@@ -4,8 +4,8 @@
 #############################################
 # JOB INFO
 
-#SBATCH --time=03-00:00:00
-#SBATCH --job-name=iphop_MLProkVir
+#SBATCH --time=04-00:00:00
+#SBATCH --job-name=iphop_Blanes
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=170G
@@ -19,8 +19,8 @@ module load cesga/system miniconda3/22.11.1-1
 
 conda activate /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Conda_Envs/iphop_env
 
-cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Malaspina/Profiles/Prok_Viruses/
+cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/
 
 mkdir iPHoP_Results
 
-iphop predict --num_threads 47 --fa_file /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Malaspina/Profiles/Prok_Viruses/Sequences/Profiles_Malaspina_Viruses_CheckV_Trimmed_Genomes.fasta --db_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/iPHoP/Aug_2023_pub_rw/ --out_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Malaspina/Profiles/Prok_Viruses/iPHoP_Results/
+iphop predict --num_threads 47 --fa_file /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/Vir_MAGs_Sequences/dsDNAphage_Blanes_virus.fasta --db_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/iPHoP/Aug_2023_pub_rw/ --out_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/iPHoP_Results/
