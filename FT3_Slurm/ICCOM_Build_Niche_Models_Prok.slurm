@@ -4,7 +4,7 @@
 #############################################
 # JOB INFO
 
-#SBATCH --time=00-00:30:00
+#SBATCH --time=00-02:00:00
 #SBATCH --job-name=ANN_Niche_Prok_RPKM
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
@@ -39,7 +39,6 @@ python3 /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/EcoModels.py \
 --build_models ANN \
 --min_resp_prev 50 \
 --z_transform True \
---skip_predictor_importance True \
 --threads $threads
 
 #--skip_predictor_importance True \

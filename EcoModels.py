@@ -53,6 +53,7 @@ parser.add_argument("--hpt_k_cv", help="Value of k t be used for k-fold cross va
 parser.add_argument("--hpt_ann_n_neurons", help="Values of number of neurons in the hidden layer to be evaluated during ANN hyperparameter tuning", default=[3,5,10], type = int,  nargs="+")
 parser.add_argument("--hpt_ann_learning_rate_init", help="Values of number of initial learning rate to be evaluated during ANN hyperparameter tuning", default=[0.001, 0.005, 0.01, 0.05], type = float,  nargs="+")
 parser.add_argument("--hpt_ann_max_iter", help="Values of maximum number of iterations to be evaluated during ANN hyperparameter tuning", default=[50,100,500], type = int,  nargs="+")
+parser.add_argument("--debug", help="Print debug messages", default=False, type = bool, )
 args = parser.parse_args()
 
 
@@ -175,12 +176,18 @@ def get_model_predictions(mor_model=None, pred_df=None, dataset="NA", print_pred
     predictions = mor_model.predict(pred_df)
     #rvar_names = resp_df.columns
     predictions_df = pd.DataFrame(predictions, columns=rvar_names, index=pred_df.index) #, 
-    predictions_df.index.name = pred_df.index.name
     #If the response variables were Z-transformed, the predictions must be back-transformed to the original scale
     if (resp_scaler != None):
         print(f"Back-transforming {dataset} predictions to original scale")
-        predictions_df = pd.DataFrame(resp_scaler.inverse_transform(predictions_df))#, columns=rvar_names, index=pred_df.index
+        raw_predictions_df = pd.DataFrame(resp_scaler.inverse_transform(predictions_df), columns=rvar_names, index=pred_df.index)#
+        raw_predictions_df.index.name = pred_df.index.name
+        raw_predictions_df["Data_Type"] = "Predicted"
+        raw_predictions_df["Dataset"] = dataset
+        if (print_preds == True):
+            output_dataframe_file = args.prefix + "_" + model_type  + "_" + dataset + "_Models_Inverse_Transformed_Predicted_Values.tsv"
+            raw_predictions_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
     #Merge the predictions with the expected/true values of the response variables in resp_df indicating which is each. This must be done after the performance metrics are calculated so that the DF maintains the correct dimensions
+    predictions_df.index.name = pred_df.index.name
     predictions_df["Data_Type"] = "Predicted"
     predictions_df["Dataset"] = dataset
     if (resp_df):
@@ -189,9 +196,10 @@ def get_model_predictions(mor_model=None, pred_df=None, dataset="NA", print_pred
     if (print_preds == True):
         output_dataframe_file = args.prefix + "_" + model_type  + "_" + dataset + "_Models_Predicted_Values.tsv"
         predictions_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
-    # print(f"Shape of predictions DF: {predictions_df.shape}")
-    # print(f"Summary of predictions DF:",predictions_df.describe())
-    # print(f"Head of predictions DF:",predictions_df.head())
+    if (args.debug == True):
+        print(f"Shape of predictions DF: {predictions_df.shape}")
+        print(f"Summary of predictions DF:",predictions_df.describe())
+        print(f"Head of predictions DF:",predictions_df.head())
     return(predictions_df)
 
 def calc_performance_metrics(mor_model=None, pred_df=None, resp_df=None, model_type=None, dataset="NA", print_perfo=False, print_preds=False, rvar_names=None, resp_scaler=None):
@@ -334,7 +342,8 @@ def prepare_single_df(type=None,df_file=None,min_var_prev=1,idx_var=None,transpo
         print(f"Shape of DF after Z-transforming values: {sub_df.shape}")
     #Return the formatted DF and the list with the names of valid variables
     valid_var_names = sub_df.columns
-    #print(f"Summary of DF after pre-processing:",sub_df.describe())
+    if (args.debug == True):
+       print(f"Summary of DF after pre-processing:",sub_df.describe())
     return(sub_df,valid_var_names,scaler)
 
 

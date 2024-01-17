@@ -25,6 +25,8 @@ env_var_coloring<-c(brewer.pal(11,"RdYlBu")[c(2,10)],brewer.pal(9,"BuPu")[7],bre
 names(env_var_coloring)<-c("Temperature","Salinity","Oxygen","ChlorophyllA","NPP.8d.VGPM..mgC.m2.day.","Ammonium.5m","Mean.Flux.at.150m","Iron.5m")
 
 ###Predictor Taxon x Response Env Var (from RF) Importance plots
+#Euk files
+metadata_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/TARA_MGs_Paired_With_Delmont_Data_Info+Metadata.tsv"
 #Virus files
 mes_vir_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/RPKM_Abundance_NA.tsv"
 importance_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/VirRF_Predictor_Importance.tsv"
