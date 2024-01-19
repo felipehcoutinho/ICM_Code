@@ -3,6 +3,8 @@ library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
 
+
+debug<-TRUE
 ###Aesthetics
 #depth_col_pal<-brewer.pal(9,"Blues")[2:9]
 #depth_col_pal<-c(brewer.pal(9,"Blues")[2:9],brewer.pal(9,"Purples")[7:9])
@@ -20,6 +22,10 @@ names(phylum_coloring)<-c("Actinobacteriota","Alphaproteobacteria","Cyanobacteri
 
 phylum_custom_selection<-c("Actinobacteriota","Alphaproteobacteria","Cyanobacteria","Bacteroidota","Verrucomicrobiota","Marinisomatota","Gammaproteobacteria","Nitrospinota","SAR324","Chloroflexota","Thermoplasmatota","Planctomycetota","Thermoproteota")
 
+genus_custom_selection<-c("Prochlorococcus_A","Pelagibacter","Nitrosopelagicus","Arctic96AD-7","Thioglobus","Synechococcus_E","TMED189","MED-G52","Prochlorococcus_B","MED-G14","Nitrosopumilus","UBA1014","GCA-002705045","HIMB59","HTCC2207","D2472","SAR86A","GCA-002718655","AG-422-B15","GCA-2707915")
+
+region_custom_selection<-c("[AO] Arctic Ocean (MRGID:1906)","[NAO] North Atlantic Ocean (MRGID:1912)","[NPO] North Pacific Ocean (MRGID:1908)","[SAO] South Atlantic Ocean (MRGID:1914)","[SPO] South Pacific Ocean (MRGID:1910)")
+
 env_var_coloring<-c(brewer.pal(11,"RdYlBu")[c(2,10)],brewer.pal(9,"BuPu")[7],brewer.pal(11,"RdYlGn")[c(8,10)],brewer.pal(8,"Dark2")[c(6,7,8)])
 #names(env_var_coloring)<-c("Temperature","Salinity","Oxygen","Chlorophyll_A","NPP.8d.VGPM..mgC.m2.day.","Ammonium_5m","Mean.Flux.at.150m","Iron_5m")
 names(env_var_coloring)<-c("Temperature","Salinity","Oxygen","ChlorophyllA","NPP.8d.VGPM..mgC.m2.day.","Ammonium.5m","Mean.Flux.at.150m","Iron.5m")
@@ -35,13 +41,49 @@ group_var<-"Host_Phylum_PHIST"#"Host_Phylum_IMGVR"#
 prefix<-"RF_Vir"
 
 #Prok files
-importance_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/ProkZANN_Predictor_SHAP_Importance.tsv"#/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/TestProkZANN_Predictor_SHAP_Relative_Importance.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/ProkZANN_Predictor_SHAP_Relative_Importance.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/ProkNoHptRF_Predictor_Importance.tsv"
+importance_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/ProkZ_ANN_Predictor_SHAP_Importance.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/Top10_ProkZ_ANN_Predictor_SHAP_Importance.tsv"#
 mes_prok_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv"
 pred_prok_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/ProkZANNTraining_Models_Predicted_Values.tsv"
-pred_info_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/OceanDNA/Sub_OceanDNA_MAGs_Info_Species_Rep_only.tsv"
+prok_pred_info_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/OceanDNA/Sub_OceanDNA_MAGs_Info_Species_Rep_only.tsv"
 metadata_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/TARA_MGs_Paired_With_Salazar_Data_Info+Metadata_Updated_with_Guidi.tsv"
 group_var<-"Phylum"
 prefix<-"ANN_Prok"
+
+
+###Calc abundance sums by group
+calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA) {
+    m_abd_df<-melt(abd_df,id=c("Sample_UID"),variable.name="Taxon_UID",value.name="Abundance")
+
+    m_abd_df<-merge(m_abd_df,info_df[,c("Taxon_UID",first_group_var)],by="Taxon_UID",all.x=TRUE)
+
+    colnames(m_abd_df)[colnames(m_abd_df) == first_group_var]<-"Group"
+
+    #Replace NA values in the Group column by "Unclassified"
+    m_abd_df$Group<-as.character(m_abd_df$Group)
+    m_abd_df$Group[which(m_abd_df$Group == "NA")] <- "Unclassified"
+    m_abd_df$Group[which(m_abd_df$Group == "")] <- "Unclassified"
+    m_abd_df$Group<-as.factor(m_abd_df$Group)
+
+    if (debug == TRUE) {
+        print("Summary of m_abd_df")
+        print(summary(m_abd_df))
+    }
+
+    group_abd_df<-dcast(m_abd_df,Sample_UID ~ Group,value.var="Abundance",fun.aggregate=sum,fill=0)
+
+    return(group_abd_df)
+}
+
+abd_df<-read.table(file=mes_prok_abd_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
+colnames(abd_df)[1]<-"Sample_UID"
+
+pred_info_df<-read.table(file=prok_pred_info_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
+colnames(pred_info_df)[1]<-"Taxon_UID"
+
+group_var<-"Genus"
+group_abd_df<-calc_group_sums(abd_df=abd_df,info_df=pred_info_df,first_group_var=group_var)
+
+group_stats_df<-calc_abund_stats(abd_df=group_abd_df,outfile="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/Stats_Genus_Abundance_Measured_Values.tsv")
 
 ###Calc abundance stats summary
 abd_df<-read.table(file=pred_prok_abd_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE,row.names=1)
@@ -49,7 +91,7 @@ abd_df<-read.table(file=pred_prok_abd_file,sep="\t",header=TRUE,quote="",comment
 outname<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/Stats_ProkZANNTraining_Models_Predicted_Values.tsv"
 
 calc_abund_stats<-function(abd_df=NA,outfile=NA) {
-    abd_df<-abd_df[,which((colnames(abd_df) != "Dataset") & (colnames(abd_df) != "Data_Type"))]
+    abd_df<-abd_df[,which((colnames(abd_df) != "Dataset") & (colnames(abd_df) != "Data_Type") & (colnames(abd_df) != "Sample_UID"))]
     #calculate how many non zero values occur in each column of abd_df
     col_nz_count<-apply(abd_df,2,function(x) length(which(x > 0)))
     #calculate median values in each column of abd_df
@@ -66,35 +108,58 @@ calc_abund_stats<-function(abd_df=NA,outfile=NA) {
 
 stats_df<-calc_abund_stats(abd_df=abd_df,outfile=outname)
 
+
 ###Parsing importance data and making SHAP importance violin plots
 imp_df<-read.table(file=importance_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
-colnames(imp_df)[1]<-"UID"
-summary(imp_df)
+colnames(imp_df)[1]<-"Sample_UID"
+colnames(imp_df)[colnames(imp_df) == "Response_Variable"]<-"Taxon_UID"
 
-#Divide the values in each row of imp_df by the max value of each row in abs_imp_df
-abs_imp_df<-imp_df
-abs_imp_df[,2:7]<-abs(abs_imp_df[,2:7])
-for (i in 1:nrow(imp_df)) {
-    imp_df[i,2:7]<-imp_df[i,2:7]/max(abs_imp_df[i,2:7])
+if (debug == TRUE) {
+    print("Summary of raw importance")
+    summary(imp_df)
 }
-summary(imp_df)
 
+transf_to_rel_imp<-TRUE
+rel_imp_prefix<-""
 
+if (transf_to_rel_imp == TRUE) {
+    imp_df<-calc_rel_imp(raw_imp_df=imp_df)
+    rel_imp_prefix<-"_Relative"
+}
+
+calc_rel_imp<-function(raw_imp_df=NA) {
+    print("Calculating relative importance")
+    #Indentify numeric columns in abs_imp_df
+    num_cols<-which(sapply(raw_imp_df,is.numeric))
+    abs_imp_df<-abs(raw_imp_df[,num_cols])
+    abs_col_max<-apply(abs_imp_df,1,max)
+    rel_imp_df<-raw_imp_df
+    rel_imp_df[,num_cols]<-raw_imp_df[,num_cols]/abs_col_max
+    if (debug == TRUE) {
+        print("Summary of relative importance")
+        print(summary(rel_imp_df))
+    }
+    return(rel_imp_df)
+}
+
+#Read in the information (e.g. taxonomic, functional category, etc) about the predictor variables
 pred_info_df<-read.table(file=pred_info_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
-colnames(pred_info_df)[1]<-"UID"
+colnames(pred_info_df)[1]<-"Taxon_UID"
 
+#Read in the sample metadata
 metadata_df<-read.table(file=metadata_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
-summary(metadata_df)
+if (debug == TRUE) {
+        print("Summary of metadata")
+        summary(metadata_df)
+}
 
-full_df<-melt(imp_df,id=c("UID","Response_Variable"),variable.name="Predictor",value.name="Importance")
-full_df<-merge(full_df,subset(metadata_df,select=c(Group, Layer_from_Table_W4, Ocean.region)),by.x="UID",by.y="Group",all.x=TRUE,suffixes=c("_Importance","_Raw_Value"))
-full_df<-merge(full_df,subset(pred_info_df,select=c("UID","Domain","Phylum","Class","Order","Family","Genus","Species")),by.x="Response_Variable",by.y="UID",all.x=TRUE)
-
-#head(full_df)
-#m_full_df<-melt(full_df,id=c("Response_Variable","Domain","UID","Phylum","Class","Order","Family","Genus","Species","Layer_from_Table_W4","Ocean.region"),variable.name="Predictor",value.name="Importance")
+#Put together the importance, predictor, and sample data into a single dataframe
+full_df<-melt(imp_df,id=c("Sample_UID","Taxon_UID"),variable.name="Predictor",value.name="Importance")
+full_df<-merge(full_df,subset(metadata_df,select=c(Sample_UID, Layer_from_Table_W4, Ocean.region)),by="Sample_UID",all.x=TRUE,suffixes=c("_Importance","_Raw_Value"))
+full_df<-merge(full_df,subset(pred_info_df,select=c("Taxon_UID","Domain","Phylum","Class","Order","Family","Genus","Species")),by="Taxon_UID",all.x=TRUE)
 
 ###Shap Importance violin plots
-make_shap_imp_violinplots<-function(data_df=NA,valid_groups=c(),first_group_var=NA,second_group_var=NA) {
+make_shap_imp_violinplots<-function(data_df=NA,valid_groups=c(),first_group_var=NA,second_group_var=NA,fig_width=45,fig_height=20) {
     
     if (length(valid_groups) > 0) {
         data_df<-data_df[which(data_df[[first_group_var]] %in% valid_groups),]
@@ -108,7 +173,10 @@ make_shap_imp_violinplots<-function(data_df=NA,valid_groups=c(),first_group_var=
         colnames(data_df)[colnames(data_df) == second_group_var]<-"Group_2"
     }
 
-    #summary(data_df)
+    if (debug == TRUE) {
+        print("Summary of data_df")
+        print(summary(data_df))
+    }
 
     figX<-ggplot(data=data_df)+
     geom_violin(aes(x=Predictor, y=Importance, fill=Predictor),alpha=0.9)+
@@ -118,7 +186,7 @@ make_shap_imp_violinplots<-function(data_df=NA,valid_groups=c(),first_group_var=
     scale_fill_manual(name="Predictor",values=env_var_coloring)+
     facet_wrap(. ~ Group_1, ncol=4)
 
-    outname<-paste(prefix,"_Importance_by_",first_group_var,"_All_Samples_Violinlots.pdf",sep="")
+    outname<-paste(prefix,rel_imp_prefix,"_Importance_by_",first_group_var,"_All_Samples_Violinlots.pdf",sep="")
     ggsave(outname,plot=figX,device=cairo_pdf,width=12,height=12,pointsize=8)
 
     if (!is.na(second_group_var)) {
@@ -130,12 +198,17 @@ make_shap_imp_violinplots<-function(data_df=NA,valid_groups=c(),first_group_var=
         scale_fill_manual(name="Predictor",values=env_var_coloring)+
         facet_grid(Group_2 ~ Group_1)
 
-        outname<-paste(prefix,"_Importance_by_",first_group_var,"_and_",second_group_var,"_Violinlots.pdf",sep="")
-        ggsave(outname,plot=figY,device=cairo_pdf,width=22,height=22,pointsize=8)
+        outname<-paste(prefix,rel_imp_prefix,"_Importance_by_",first_group_var,"_and_",second_group_var,"_Violinlots.pdf",sep="")
+        ggsave(outname,plot=figY,device=cairo_pdf,width=fig_width,height=fig_height, pointsize=8) #
     }
 }
 
-make_shap_imp_violinplots(data_df=full_df,valid_groups=phylum_custom_selection,first_group_var="Phylum",second_group_var="Ocean.region")
+make_shap_imp_violinplots(data_df=full_df[which(full_df$Genus %in% genus_custom_selection & full_df$Ocean.region %in% region_custom_selection),],first_group_var="Genus",second_group_var="Ocean.region",fig_width=45,fig_height=15)
+
+make_shap_imp_violinplots(data_df=full_df[which(full_df$Genus %in% genus_custom_selection),],first_group_var="Genus",second_group_var="Layer_from_Table_W4",fig_width=45,fig_height=10)
+
+#make_shap_imp_violinplots(data_df=full_df,valid_groups=phylum_custom_selection,first_group_var="Phylum",second_group_var="Ocean.region")
+
 
 
 ###Current vs Projected abundance plots for single OTU
@@ -211,7 +284,6 @@ theme(legend.position="top")+
 facet_wrap(. ~ Layer, ncol=2, nrow=2)
 
 ggsave("Single_OTU_Test_TrainedxTest_Density_Plot.pdf",plot=figX,device=cairo_pdf,width=10,height=10,pointsize=8)
-
 
 
 ###Trained x Test Predicted Values for Community diversity
