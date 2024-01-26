@@ -4,7 +4,7 @@
 #############################################
 # JOB INFO
 
-#SBATCH --time=04-00:00:00
+#SBATCH --time=03-00:00:00
 #SBATCH --job-name=iphop_Blanes
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
@@ -23,4 +23,6 @@ cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/
 
 mkdir iPHoP_Results
 
-iphop predict --num_threads 47 --fa_file /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/Vir_MAGs_Sequences/dsDNAphage_Blanes_virus.fasta --db_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/iPHoP/Aug_2023_pub_rw/ --out_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/iPHoP_Results/
+#iphop predict --num_threads 47 --fa_file /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/Vir_MAGs_Sequences/dsDNAphage_Blanes_virus.fasta --db_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/iPHoP/Aug_2023_pub_rw/ --out_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/iPHoP_Results/
+
+iphop predict --num_threads 47 --fa_file /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/test_iphop/Top_1500_dsDNAphage_Blanes_virus.fasta --db_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/iPHoP/Aug_2023_pub_rw/ --out_dir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/iPHoP_Results/

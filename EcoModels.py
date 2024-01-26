@@ -45,6 +45,7 @@ parser.add_argument("--prefix", help="Prefix of output file names", default="Eco
 parser.add_argument("--z_transform", help="Flag to Z-transform values of predictor and response variables before training models", default = False, type = bool)
 parser.add_argument("--threads", help="Number of threads to be used during analysis", default=1, type = int)
 parser.add_argument("--build_models", help="Type of models to build. Requieres at least one of: ANN, RF", default=None, type = str,  nargs="+")
+parser.add_argument("--load_model", help=".pkl pre-computed file with model(s) to be used instead of fitting from scratch", default=None, type = str)
 parser.add_argument("--min_pred_prev", help="Minimum number of non-zero values required for variables in the preditor DF to be include in models", default=1, type = int)
 parser.add_argument("--min_resp_prev", help="Minimum number of non-zero values required for variables in the response DF to be include in models", default=1, type = int)
 parser.add_argument("--run_hpt", help="Flag to run hyperparameter tuning with grid search cross validation to find best HP to be used for training a final model", default=False, type = bool)
@@ -60,11 +61,15 @@ args = parser.parse_args()
 def central():
     #Format the datasets to be used by the models any columns with NA values in any samples are removed)
     (full_df,pred_df,resp_df,valid_pred_var_names,valid_resp_var_names,resp_scaler,pred_scaler) = format_datasets()
-    #Build models
+    #Build models or load pre-computed models provided by the user
     for model_type in args.build_models:
-        print(f"Building {model_type} models")
-        full_MOR = build_model(pred_df=pred_df,resp_df=resp_df,model_type=model_type)
-        #full_MOR = build_ann(pred_df=pred_df,resp_df=resp_df)
+        if (args.load_model):
+            print(f"Loading {model_type} models from file: {args.load_model}")
+            full_MOR = pickle.load(open(args.load_model, 'rb'))
+        else:
+            print(f"Building {model_type} models")
+            full_MOR = build_model(pred_df=pred_df,resp_df=resp_df,model_type=model_type)
+        #Calculate performance metrics for training set
         (train_performance_df, train_predictions_df) = calc_performance_metrics(mor_model=full_MOR, pred_df=pred_df,resp_df=resp_df, model_type=model_type, dataset="Training", print_perfo=True, print_preds=True, rvar_names=valid_resp_var_names,resp_scaler=resp_scaler)
         if (args.skip_predictor_importance == False):
             #Calculate predictor importances
@@ -72,7 +77,7 @@ def central():
         #Calculate predictions for test sets if provided
         for test_file in args.test_predictor_table:
             print(f"\tCalculating predictions for test set: {test_file}")
-            (test_df, valid_test_var_names,test_scaler) = prepare_single_df(type="predictor",df_file=test_file,min_var_prev=args.min_pred_prev,idx_var=args.predictor_index,transpose=args.transpose_predictors,z_transform=args.z_transform,valid_var_names=valid_pred_var_names, scaler=pred_scaler)
+            (test_df, valid_test_var_names, test_scaler) = prepare_single_df(type="predictor",df_file=test_file,min_var_prev=args.min_pred_prev,idx_var=args.predictor_index,transpose=args.transpose_predictors,z_transform=args.z_transform,valid_var_names=valid_pred_var_names, scaler=pred_scaler)
             test_predictions_df = get_model_predictions(mor_model=full_MOR, pred_df=test_df, dataset="Testing", model_type=model_type, print_preds=True, rvar_names=valid_resp_var_names, resp_scaler=resp_scaler)
 
 def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,resp_df=None,model_type=None):
@@ -97,32 +102,31 @@ def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,resp_df
         output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_Gini_Importance.tsv"
         full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
 
-        #Calculate permutation predictor importances for each model in the MOR model
-        print("Calculating permutation predictor importances")
-        idx = 0
-        imp_dfs_list = []
-        for rf in mor_model.estimators_:
-            #Calculate the relative importance of predictors
-            rname = rvar_names[idx]
-            #Calculate relative importance of predictor variables
-            pred_imps = permutation_importance(estimator=rf, X=pred_df, y=resp_df[rname], n_repeats=5, random_state=42, max_samples=0.5, scoring="neg_root_mean_squared_error", n_jobs=args.threads)
-            model_imp_df = pd.DataFrame(pred_imps.importances) #Can also directely get means with pred_imps.importances_mean
-            model_imp_df.index.name = 'Predictor_Index'
-            for col in model_imp_df.columns:
-                model_imp_df.rename(columns={col: "Iteration_"+str(col)},inplace=True)
-            #model_imp_df.rename(columns={0: rname},inplace=True)
-            model_imp_df['Predictor_Variable'] = pred_df.columns
-            model_imp_df.set_index('Predictor_Variable',inplace=True)
-            model_imp_df['Response_Variable'] = rname
-            #print(model_imp_df.describe())
-            imp_dfs_list.append(model_imp_df)
-            idx = idx + 1
-        full_imp_df = pd.concat(imp_dfs_list,axis=0)
-        output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_Permutation_Importance.tsv"
-        full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
+        # #Calculate permutation predictor importances for each model in the MOR model
+        # print("Calculating permutation predictor importances")
+        # idx = 0
+        # imp_dfs_list = []
+        # for rf in mor_model.estimators_:
+        #     #Calculate the relative importance of predictors
+        #     rname = rvar_names[idx]
+        #     #Calculate relative importance of predictor variables
+        #     pred_imps = permutation_importance(estimator=rf, X=pred_df, y=resp_df[rname], n_repeats=5, random_state=42, max_samples=0.5, scoring="neg_root_mean_squared_error", n_jobs=args.threads)
+        #     model_imp_df = pd.DataFrame(pred_imps.importances) #Can also directely get means with pred_imps.importances_mean
+        #     model_imp_df.index.name = 'Predictor_Index'
+        #     for col in model_imp_df.columns:
+        #         model_imp_df.rename(columns={col: "Iteration_"+str(col)},inplace=True)
+        #     #model_imp_df.rename(columns={0: rname},inplace=True)
+        #     model_imp_df['Predictor_Variable'] = pred_df.columns
+        #     model_imp_df.set_index('Predictor_Variable',inplace=True)
+        #     model_imp_df['Response_Variable'] = rname
+        #     #print(model_imp_df.describe())
+        #     imp_dfs_list.append(model_imp_df)
+        #     idx = idx + 1
+        # full_imp_df = pd.concat(imp_dfs_list,axis=0)
+        # output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_Permutation_Importance.tsv"
+        # full_imp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
     #SHAP
     if ((model_type == "ANN") or (model_type == "RF")):
-        print("Calculating SHAP predictor importances for models")
         idx = 0
         imp_dfs_list = []
         rimp_dfs_list = []
@@ -130,9 +134,15 @@ def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,resp_df
         #For each model, calculate SHAP predictor importance per sample, the SHAP relative predictor importance per sample, then calculate the mean of the relative SHAP importance values of each predictor, per response variable across all samples
         for single_model in mor_model.estimators_:
             rname = rvar_names[idx]
-            explainer = shap.KernelExplainer(single_model.predict,shap.kmeans(pred_df,10),feature_names=pred_df.columns) #for a random subsampling use: shap.utils.sample instead of shap.kmeans
+            if (model_type == "ANN"):
+                print("Calculating SHAP predictor importances for models using Kernel Explainer")
+                explainer = shap.KernelExplainer(single_model.predict,shap.kmeans(pred_df,10),feature_names=pred_df.columns) #for a random subsampling use: shap.utils.sample instead of shap.kmeans
+                shap_values = explainer.shap_values(pred_df,nsamples=100 )
+            elif (model_type == "RF"):
+                print("Calculating SHAP predictor importances for models using Tree Explainer")
+                explainer = shap.TreeExplainer(model=single_model)#, data=shap.kmeans(pred_df,10), model_output="raw", feature_names=pred_df.columns)
+                shap_values = explainer.shap_values(pred_df)
             #Generate DF with raw importance valeus from shap explainer output
-            shap_values = explainer.shap_values(pred_df,nsamples=100)
             model_imp_df = pd.DataFrame(shap_values)
             model_imp_df.index = pred_df.index
             model_imp_df.columns=pred_df.columns
@@ -170,6 +180,7 @@ def calc_predictor_importances(mor_model=None,rvar_names=[],pred_df=None,resp_df
         output_dataframe_file = args.prefix + "_" + model_type + "_Predictor_SHAP_Median_Relative_Importance.tsv"
         full_mrimp_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
 
+
  
 def get_model_predictions(mor_model=None, pred_df=None, dataset="NA", print_preds=False,  resp_df=None, model_type=None, rvar_names=None, resp_scaler=None):
     #Generarte predictions for the response variables based on the output of the received model and the passed predictors
@@ -190,6 +201,9 @@ def get_model_predictions(mor_model=None, pred_df=None, dataset="NA", print_pred
     predictions_df.index.name = pred_df.index.name
     predictions_df["Data_Type"] = "Predicted"
     predictions_df["Dataset"] = dataset
+    #Merge predictions_df and pred_df so it si possible to kepe track of the output resutls in the input df
+    #if (dataset == "Testing"):
+    #    predictions_df = pd.concat([predictions_df, pred_df], axis=1, join='inner')
     if (resp_df):
         resp_df["Data_Type"] = "Measured"
         predictions_df = pd.concat([predictions_df, resp_df], axis=0)
@@ -221,7 +235,7 @@ def calc_performance_metrics(mor_model=None, pred_df=None, resp_df=None, model_t
     performance_df.index.name = 'Response_Variable'
     if (print_perfo == True):
         performance_df["Dataset"] = dataset
-        output_dataframe_file = args.prefix + str(model_type) + dataset + "_Models_Performance_Info.tsv"
+        output_dataframe_file = args.prefix + "_" + str(model_type) + "_" + dataset + "_Models_Performance_Info.tsv"
         performance_df.to_csv(output_dataframe_file,sep="\t",na_rep='NA')
     
     return(performance_df,predictions_df)
@@ -234,7 +248,7 @@ def build_model(resp_df=None, pred_df=None, model_type=None):
         param_grid={'estimator__learning_rate_init': args.hpt_ann_learning_rate_init, 'estimator__max_iter': args.hpt_ann_max_iter, 'estimator__hidden_layer_sizes': args.hpt_ann_n_neurons}
     elif (model_type == "RF"):
         #IF bootstrap = True, must consider: max_samples = 0.5
-        model = RandomForestRegressor(random_state=42, n_jobs=1, max_depth =  None, max_leaf_nodes = None, min_impurity_decrease = 0.05, n_estimators = 500,  bootstrap=False, max_features=1.0)
+        model = RandomForestRegressor(random_state=42, n_jobs=args.threads, max_depth =  None, max_leaf_nodes = None, min_impurity_decrease = 0.05, n_estimators = 500,  bootstrap=False, max_features=1.0)
         param_grid={'estimator__n_estimators': args.hpt_rf_trees, 'estimator__max_leaf_nodes': [2,5,10,100,1000], 'estimator__max_depth': [2,5,10,100,1000],'estimator__min_impurity_decrease': [0.0, 0.1, 0.5, 1.0],'estimator__max_samples': [0.25, 0.5, 0.75, 1.0]}
     #Instantiate a MultiOutputRegressor object to build a model for each response variable
     #Here there is some room for improvemnt on multithreading when no HPT will be performed, the multithreading should be done at the level of the RF model by setting n_jobs = args.threads, but when it is performed, the multithreading should be done at the level of the GridSearchCV. Since the RFs are fast regardless, this is not a priority

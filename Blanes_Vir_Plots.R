@@ -2,8 +2,7 @@ library(ggpubr)
 library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
-library(maps)
-world_map <- map_data("world")
+
 
 debug<-TRUE
 ###Aesthetics
@@ -26,42 +25,53 @@ names(phylum_coloring)<-c("Actinobacteriota","Alphaproteobacteria","Cyanobacteri
 
 phylum_custom_selection<-c("Actinobacteriota","Alphaproteobacteria","Cyanobacteria","Bacteroidota","Verrucomicrobiota","Marinisomatota","Gammaproteobacteria","Nitrospinota","SAR324","Chloroflexota","Thermoplasmatota","Planctomycetota","Thermoproteota")
 
-genus_custom_selection<-c("Prochlorococcus_A","Pelagibacter","Nitrosopelagicus","Arctic96AD-7","Thioglobus","Synechococcus_E","TMED189","MED-G52","Prochlorococcus_B","MED-G14","Nitrosopumilus","UBA1014","GCA-002705045","HIMB59","HTCC2207","D2472","SAR86A","GCA-002718655","AG-422-B15","GCA-2707915")
+###Raw phist preds
+all_phist_preds<-read.table(file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/PHIST_Predictions/PHIST_Output/positive_predictions.csv",sep=",",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
 
-region_custom_selection<-c("[AO] Arctic Ocean (MRGID:1906)","[NAO] North Atlantic Ocean (MRGID:1912)","[NPO] North Pacific Ocean (MRGID:1908)","[SAO] South Atlantic Ocean (MRGID:1914)","[SPO] South Pacific Ocean (MRGID:1910)")
+summary(all_phist_preds)
 
+Host_ID_data<-read.table(file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/Blanes_MAG_Info.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
+colnames(Host_ID_data)[1]<-"Host_ID"
 
-env_var_coloring<-c(brewer.pal(11,"RdYlBu")[c(2,10)],brewer.pal(9,"BuPu")[7],brewer.pal(11,"RdYlGn")[c(8,10)],brewer.pal(8,"Dark2")[c(6,7,8)])
-#vir names
-#names(env_var_coloring)<-c("Temperature","Salinity","Oxygen","Chlorophyll_A","NPP.8d.VGPM..mgC.m2.day.","Ammonium_5m","Mean.Flux.at.150m","Iron_5m")
-#Prok names
-names(env_var_coloring)<-c("Temperature","Salinity","Oxygen","ChlorophyllA","NPP.8d.VGPM..mgC.m2.day.","Ammonium.5m","Mean.Flux.at.150m","Iron.5m")
+summary(Host_ID_data)
 
-###Predictor Taxon x Response Env Var (from RF) Importance plots
-#Euk files
-metadata_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/TARA_MGs_Paired_With_Delmont_Data_Info+Metadata.tsv"
+all_phist_preds<-read.table(file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/PHIST_Predictions/PHIST_Output/positive_predictions.csv",sep=",",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
 
-#Prok files
-importance_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/ProkZ_ANN_Predictor_SHAP_Importance.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/RF/ProkZTop100_RF_Predictor_SHAP_Importance.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/RF/ProkZ_RF_Predictor_SHAP_Importance.tsv"#"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/Top10_ProkZ_ANN_Predictor_SHAP_Importance.tsv"#
-mes_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv"
-pred_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/ProkZ_ANN_Training_Models_Inverse_Transformed_Predicted_Values.tsv"
-pred_info_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/OceanDNA/Sub_OceanDNA_MAGs_Info_Species_Rep_only.tsv"
-metadata_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/TARA_MGs_Paired_With_Salazar_Data_Info+Metadata_Updated_with_Guidi.tsv"
-scenarios_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/TARA_MGs_Paired_With_Salazar_Data_Info+Metadata_Updated_with_Guidi_Scenarios.tsv"
-scenarios_pred_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/ProkZ_ANN_Testing_Models_Inverse_Transformed_Predicted_Values.tsv"
-performance_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/ProkZ_ANN_Training_Models_Performance_Info.tsv"
-resp_stats_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Prokaryotes/Niche_Models/Stats_Prok_Measured_Values.tsv"
-prefix<-"ANN_Prok"#"RF_Prok"#"ANN_Prok"
+filtered_phist_preds<-filter_phist_preds(phist_df=all_phist_preds,host_df=Host_ID_data,max_p_value=2.384e-14)
 
-#Virus files
-mes_vir_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Abundance/RPKM_Abundance_NA.tsv"
-importance_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Viruses/RF/VirZ_RF_Predictor_SHAP_Importance.tsv"#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Viruses/Niche_Models/VirZ_ANN_Predictor_SHAP_Importance.tsv"
-pred_info_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Viruses/Info_Sequences/Full_Info_IMGVR_Scaffolds_Comp_75-100_Max_Conta_0_vOTU_Representatives.tsv"
-metadata_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Metadata/Marine_Viral_Communities_Sample_Metadata_Updated_with_Guidi.tsv"
-scenarios_pred_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Viruses/Niche_Models/VirZ_ANN_Testing_Models_Inverse_Transformed_Predicted_Values.tsv"
-pred_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/Viruses/Niche_Models/VirZ_ANN_Training_Models_Inverse_Transformed_Predicted_Values.tsv"
-prefix<-"ANN_Vir"#"RF_Vir"#
+filter_phist_preds <- function(phist_df,host_df,max_p_value=2.384e-14) {
+    library(data.table)
 
+    colnames(all_phist_preds)[1]<-"Virus_ID"
+    colnames(all_phist_preds)[2]<-"Host_ID"
+
+    all_phist_preds$Host_ID<-as.factor(gsub("^(No_Vir_)|(\\.fasta)$|(\\.fa)$","",all_phist_preds$Host_ID,perl=TRUE))
+    all_phist_preds$Virus_ID<-as.factor(gsub("(\\.fasta)$|(\\.fa)$","",all_phist_preds$Virus_ID,perl=TRUE))
+
+    all_phist_preds<-merge(all_phist_preds,Host_ID_data,by=c("Host_ID"),all.x=TRUE)
+
+    #summary(all_phist_preds)
+
+    write.table(all_phist_preds,file="All_PHIST_Predictions_with_Host_Data.tsv",sep="\t",quote=FALSE,row.names=FALSE)
+
+    filtered_phist_preds<-all_phist_preds[which(all_phist_preds$pvalue <= max_p_value),]
+
+    filtered_phist_preds<-as.data.table(filtered_phist_preds)
+
+    filtered_phist_preds<-filtered_phist_preds[filtered_phist_preds[, .I[which.min(pvalue)], by=Virus_ID]$V1]
+
+    filtered_phist_preds<-as.data.frame(filtered_phist_preds)
+
+    write.table(filtered_phist_preds,file="Best_Filtered_PHIST_Predictions_with_Host_Data.tsv",sep="\t",quote=FALSE,row.names=FALSE)
+
+    #summary(filtered_phist_preds)
+
+    return(filtered_phist_preds)
+}
+
+full_vir_scaff_data<-merge(vir_scaff_data,filtered_phist_preds,by="Virus_ID",all.x=TRUE)
+
+###Seq info
 #gVOD
 metadata_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/gVOD/gVOD_Raw_Data.tsv"
 scenarios_pred_abd_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/ICCOMM/gVOD/gVOD_V+P_ANN_Testing_Models_Inverse_Transformed_Predicted_Values.tsv"
@@ -83,7 +93,7 @@ m_imp<-melt(imp_df,id=c("Predictor_Variable"),variable.name="Response_Variable",
 
 m_imp<-m_imp[which(m_imp$Importance != 0),]
 
-pred_info_df<-read.table(file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/OceanDNA/Sub_OceanDNA_MAGs_Info_Species_Rep_only.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
+pred_info_df<-read.table(file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Databases/OceanDNA/Sub_OceanDNA_Host_IDs_Info_Species_Rep_only.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
 colnames(pred_info_df)[1]<-"Taxon_UID"
 
 m_imp<-merge(m_imp,subset(pred_info_df,select=c("Taxon_UID","Phylum")),by.x="Predictor_Variable",by.y="Taxon_UID",all.x=TRUE)
@@ -678,7 +688,7 @@ group_stats_df<-calc_abund_stats(abd_df=group_abd_df,outfile="/mnt/lustre/scratc
 
 
 ###Current vs Projected abundance plots for single OTU
-# resp_mes_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_MAGs_by_MAG_ID.tsv"
+# resp_mes_file<-"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/StG23/Prokaryotes/Abundance/Transposed_RPKM_Abundance_OceanDNA_All_Species_Rep_Host_IDs_by_Host_ID_ID.tsv"
 
 # resp_mes_df<-read.table(file=resp_mes_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
 

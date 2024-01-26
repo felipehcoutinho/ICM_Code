@@ -4,11 +4,11 @@
 #############################################
 # JOB INFO
 
-#SBATCH --time=00-05:00:00
+#SBATCH --time=01-00:00:00
 #SBATCH --job-name=Vpop_Blanes_Prok_Vir
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
-#SBATCH --mem=4G
+#SBATCH --mem=25G
 #SBATCH --output=/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Job_Logs/%J.out
 #SBATCH --error=/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Job_Logs/%J.err
 #SBATCH --mail-type=All
