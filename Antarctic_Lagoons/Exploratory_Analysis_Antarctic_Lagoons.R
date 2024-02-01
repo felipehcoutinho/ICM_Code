@@ -4,7 +4,10 @@ library(ggplot2)
 library(RColorBrewer)
 library(ggpubr)
 
-metadata_df<-read.table(file = "/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Antarctic_Lagoon/Metadata/Sample_Metadata.tsv", sep = "\t", header=TRUE)
+#"/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Antarctic_Lagoon/Metadata/Sample_Metadata.tsv"
+#"/mnt/smart/users/fcoutinho/Antarctic_Lagoons/Metadata/Sample_Metadata.tsv"
+metadata_file<-"/mnt/smart/users/fcoutinho/Antarctic_Lagoons/Metadata/Sample_Metadata.tsv"
+metadata_df<-read.table(file = metadata_file, sep = "\t", header=TRUE)
 rownames(metadata_df)<-metadata_df$Sample_UID
 
 metadata_df$Depth <- metadata_df$Depth - 0.5
@@ -14,15 +17,66 @@ metadata_df$MG_ID<-gsub("Core(\\s)+","",metadata_df$MG_ID,perl=TRUE)
 metadata_df$MG_ID<-gsub("Cm(\\s)","",metadata_df$MG_ID,perl=TRUE)
 metadata_df$MG_ID<-as.factor(paste(metadata_df$MG_ID,"_S1",sep=""))
 
-pca_metadata<-subset(metadata_df,select=c(Sample_UID,Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Mo,Cd,Pb))
-rownames(pca_metadata)<-pca_metadata$Sample_UID
-pca_metadata$Sample_UID<-NULL
-sdata<-as.data.frame(scale(pca_metadata,center=TRUE,scale=TRUE))
+#ASV data
+#/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Antarctic_Lagoon/DADA/DADA2_ASVs_Percentage_Abundances_Antarctic_Lagoons.tsv
+#/mnt/smart/users/fcoutinho/Antarctic_Lagoons/DADA_Output/DADA2_ASVs_Percentage_Abundances_Antarctic_Lagoons.tsv
+asv_abd_file<-"/mnt/smart/users/fcoutinho/Antarctic_Lagoons/DADA_Output/DADA2_ASVs_Percentage_Abundances_Antarctic_Lagoons.tsv"
+asv_perc_abd_df<-read.table(file = asv_abd_file, sep = "\t", header=TRUE)
+colnames(asv_perc_abd_df)[1]<-"MG_ID"
+#/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Antarctic_Lagoon/DADA/DADA2_ASVs_Info_Antarctic_Lagoons.tsv
+#/mnt/smart/users/fcoutinho/Antarctic_Lagoons/DADA_Output/DADA2_ASVs_Info_Antarctic_Lagoons.tsv
+asv_info_file<-"/mnt/smart/users/fcoutinho/Antarctic_Lagoons/DADA_Output/DADA2_ASVs_Info_Antarctic_Lagoons.tsv"
+asv_info_df<-read.table(file = asv_info_file, sep = "\t", header=TRUE)
+
+
+###NMDS
+rownames(asv_perc_abd_df)<-asv_perc_abd_df$MG_ID
+asv_perc_abd_df$MG_ID<-NULL
+
+dist_metric<-"bray"
+dists<-vegdist(asv_perc_abd_df, method = dist_metric)
+
+set.seed(666)
+mdsresult<-metaMDS(dists,distance = dist_metric,k = 2,maxit = 999)
+data.scores<-as.data.frame(scores(mdsresult))
+data.scores$Sample<-rownames(data.scores)
+
+mdata<-data.scores
+
+core_id<-data.frame(do.call('rbind', strsplit(as.character(mdata$Sample),'_',fixed=TRUE)))
+colnames(core_id)<-c("Core","Depth_cm","Replicate")
+mdata<-as.data.frame(cbind(mdata,core_id))
+summary(mdata)
+
+library(RColorBrewer)
+depth_col_pal<-brewer.pal(9,"RdBu")
+depth_col_grad<-rev(colorRampPalette(depth_col_pal)(n=299))
+
+mdata$Depth_cm<-as.numeric(as.character(mdata$Depth_cm))
+
+figX<-ggplot(mdata, aes(x=NMDS1,y=NMDS2))+geom_point(size=3.5, aes(colour=Depth_cm, shape=Core))+theme_bw()+theme(text=element_text(size=16))+scale_colour_gradientn(colours = depth_col_grad, name="Depth",trans = 'reverse')
+#+scale_fill_gradientn(colours = depth_col_grad, name="Depth",trans = 'reverse') ,limits = c(4000, 0),
+
+ggsave("NMDS_Antarctic_Lagoons.pdf",plot=figX,device=cairo_pdf,width=6,height=5,pointsize=8)
+
+
+###NMDS x Env Var Correlations
+mdata<-merge(mdata,metadata_df,by.x="Sample",by.y="MG_ID",all.x=TRUE)
+
+cor_df<-cor(subset(mdata,select=c(NMDS1,NMDS2,Depth,Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Mo,Cd,Pb)))
+write.table(cor_df,file="NMDS_Env_Var_Correlations_Antarctic_Lagoons.tsv",sep="\t",quote=FALSE,row.names=TRUE,col.names=NA)
+
+###ANOSIM
+full_data<-merge(asv_perc_abd_df,metadata_df,by="MG_ID")
+
+anosim_result<-anosim(full_data[,c(2:ncol(asv_perc_abd_df))], full_data$Core_ID, distance="bray",permutations=999)
+
+summary(anosim_result)
+
+###Vriation partitioning (requires at least 2 ables)
+vpart_result<-varpart(full_data[,c(2:ncol(asv_perc_abd_df))], subset(full_data,select=c(Depth,Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Mo,Cd,Pb)))
 
 ###Phylum barplot
-asv_perc_abd_df<-read.table(file = "/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Antarctic_Lagoon/DADA/DADA2_ASVs_Percentage_Abundances_Antarctic_Lagoons.tsv", sep = "\t", header=TRUE)
-
-asv_info_df<-read.table(file = "/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Antarctic_Lagoon/DADA/DADA2_ASVs_Info_Antarctic_Lagoons.tsv", sep = "\t", header=TRUE)
 
 asv_info_df$Phylum[which(asv_info_df$Phylum == "Proteobacteria")]<-asv_info_df$Class[which(asv_info_df$Phylum == "Proteobacteria")]
 
@@ -78,36 +132,14 @@ coord_flip()+facet_wrap(Core ~.)
 
 ggsave("Phylum_Barplots_Antarctic_Lagoons.pdf",plot=fig2B,device=cairo_pdf,width=15,height=10,pointsize=8)
 
-###NMDS
-dist_metric<-"bray"
-dists<-vegdist(asv_perc_abd_df, method = dist_metric)
-
-set.seed(666)
-mdsresult<-metaMDS(dists,distance = dist_metric,k = 2,maxit = 999)
-data.scores<-as.data.frame(scores(mdsresult))
-data.scores$Sample<-rownames(data.scores)
-
-mdata<-data.scores
-
-core_id<-data.frame(do.call('rbind', strsplit(as.character(mdata$Sample),'_',fixed=TRUE)))
-colnames(core_id)<-c("Core","Depth_cm","Replicate")
-mdata<-as.data.frame(cbind(mdata,core_id))
-summary(mdata)
-
-library(RColorBrewer)
-depth_col_pal<-brewer.pal(9,"RdBu")
-depth_col_grad<-rev(colorRampPalette(depth_col_pal)(n=299))
-
-mdata$Depth_cm<-as.numeric(as.character(mdata$Depth_cm))
-
-figX<-ggplot(mdata, aes(x=NMDS1,y=NMDS2))+geom_point(size=3.5, aes(colour=Depth_cm, shape=Core))+theme_bw()+theme(text=element_text(size=16))+scale_colour_gradientn(colours = depth_col_grad, name="Depth",trans = 'reverse')
-#+scale_fill_gradientn(colours = depth_col_grad, name="Depth",trans = 'reverse') ,limits = c(4000, 0),
-
-ggsave("NMDS_Antarctic_Lagoons.pdf",plot=figX,device=cairo_pdf,width=6,height=5,pointsize=8)
-
-
 
 #Perform PCA ordination
+pca_metadata<-subset(metadata_df,select=c(Sample_UID,Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Mo,Cd,Pb))
+rownames(pca_metadata)<-pca_metadata$Sample_UID
+pca_metadata$Sample_UID<-NULL
+sdata<-as.data.frame(scale(pca_metadata,center=TRUE,scale=TRUE))
+
+
 set.seed(666)
 rdadata<-rda(sdata)
 
