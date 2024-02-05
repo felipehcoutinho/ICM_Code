@@ -25,7 +25,26 @@ names(phylum_coloring)<-c("Actinobacteriota","Alphaproteobacteria","Cyanobacteri
 
 phylum_custom_selection<-c("Actinobacteriota","Alphaproteobacteria","Cyanobacteria","Bacteroidota","Verrucomicrobiota","Marinisomatota","Gammaproteobacteria","Nitrospinota","SAR324","Chloroflexota","Thermoplasmatota","Planctomycetota","Thermoproteota")
 
-###Raw phist preds
+###Parse Virlapopulation and phist data (MARBITS)
+vpop_data<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Vpop/VPop_dsDNAphage_Blanes_virus.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+summary(vpop_data)
+
+phist_data<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/PHIST_Predictions/PHIST_Output/Best_Filtered_PHIST_Predictions_with_Host_Data.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+summary(phist_data)
+phist_data$GC<-NULL
+phist_data$Length<-NULL
+
+full_data<-merge(vpop_data,phist_data,by.x="Sequence", by.y="Virus_ID",all.x=TRUE)
+
+write.table(full_data,file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Info_Indiv_Hosts_dsDNAphage_Blanes_virus.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
+
+vp_h_data<-full_data[which(full_data$Population_Representative == "True" & !is.na(full_data$Host_ID)),]
+
+full_data2<-merge(vpop_data,vp_h_data[,c("Population","Host_ID","Domain","Phylum","Class","Order","Family", "Genus","Species","Complete.GTDB.taxonomy")],by="Population",all.x=TRUE)
+
+write.table(full_data2,file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Info_VP_Rep_Propagated_Hosts_dsDNAphage_Blanes_virus.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
+
+###Raw phist preds (FT3)
 all_phist_preds<-read.table(file="/mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/Blanes_Vir_Nestor/PHIST_Predictions/PHIST_Output/positive_predictions.csv",sep=",",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
 
 summary(all_phist_preds)

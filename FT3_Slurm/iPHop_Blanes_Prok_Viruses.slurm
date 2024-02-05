@@ -3,7 +3,7 @@
 # SLURM HEADER
 #############################################
 # JOB INFO
-
+#SBATCH --account=emm4
 #SBATCH --time=03-00:00:00
 #SBATCH --job-name=iphop_Blanes
 #SBATCH --ntasks=1
