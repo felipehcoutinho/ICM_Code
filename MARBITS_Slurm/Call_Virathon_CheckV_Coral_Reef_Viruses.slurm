@@ -5,7 +5,7 @@
 # JOB INFO
 #SBATCH --account=emm4
 #SBATCH --time=00-24:00:00
-#SBATCH --job-name=Virathon_CheckV_Malaspina_Profiles_Prok_Viruses
+#SBATCH --job-name=Virathon_CheckV_Coral_Reef_Viruses
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=20G
@@ -15,10 +15,10 @@
 #SBATCH --mail-user=fhernandes@icm.csic.es
 
 ##############################################
-module load python/3.8.5 checkv/0.7.0
+module load checkv/0.7.0 python/3.8.5
 
 export CHECKVDB="/mnt/lustre/repos/bio/databases/public/checkv/checkv-db-v1.0/"
 
 cd /mnt/smart/users/fcoutinho/Coral_Reef_Viruses/viruses/
 
-python3 /mnt/cold02/bio/fcoutinho/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/Coral_Reef_Viruses/viruses/All_Coral_Reef_Virus_Sequences.fasta --call_checkv True --info_output CheckV_Info_All_Coral_Reef_Virus_Sequences.tsv --threads 47 
+python3 /mnt/smart/users/fcoutinho/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/Coral_Reef_Viruses/viruses/Coral_Reef_Viruses_All_vMAG_Sequences.fasta --call_checkv True --info_output CheckV_Info_All_Coral_Reef_Virus_Sequences.tsv --threads 47 

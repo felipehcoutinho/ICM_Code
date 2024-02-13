@@ -8,7 +8,7 @@
 #SBATCH --job-name=iphop_Blanes
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
-#SBATCH --mem=250G
+#SBATCH --mem=750G
 #SBATCH --output=/mnt/smart/users/fcoutinho/Job_Logs/jobLog_%J.out
 #SBATCH --error=/mnt/smart/users/fcoutinho/Job_Logs/jobLog_%J.err
 #SBATCH --mail-type=All
