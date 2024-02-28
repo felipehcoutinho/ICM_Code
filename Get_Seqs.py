@@ -16,7 +16,7 @@ parser.add_argument("--max_length", help="Minimum length of sequences to be incl
 parser.add_argument("--id_split_sep", help="Optional separator to split the Sequence IDs in the input fasta file", default=None, type=str)
 parser.add_argument("--id_split_pos", help="Optional index number used to match the split Sequence ID field to the IDs in the list file. Counts from 0", default=0, type=int)
 parser.add_argument("--fetch_all", help="Flag to fetch all sequences regardless of them being in the list. Useful for simply filtering by length or spliting sequences by their IDs.", default=False, type=bool)
-parser.add_argument("--group", help="Must be used alognside --id_split_sep and --id_split_pos. When setting this flag to True, sequences will be wirtten to output in multi sequence files, accoring to the specified the value of their id_split_pos, ineatd of simply generatign matched and unmatched files", default=False, type=bool)
+parser.add_argument("--group", help="Must be used alognside --id_split_sep and --id_split_pos. When setting this flag to True, sequences will be wirtten to output in multi sequence files, according to the specified the value of their id_split_pos, ineatd of simply generatign matched and unmatched files", default=False, type=bool)
 args = parser.parse_args()
 
 
@@ -40,6 +40,7 @@ def read_list(file):
 
 #TODO: have a single function that can be called by both fetch_seqs and fetch_and_group_seqs
 def fetch_and_group_seqs(input_files_list,input_format,matched_output_file,unmatched_output_file,output_format,ids_list,min_length,max_length,fetch_all=False):
+    print("Grouping sequences by ID...")
     total_seq_counter = 0
     passed_seq_counter = 0
     passed_seq_ids = []

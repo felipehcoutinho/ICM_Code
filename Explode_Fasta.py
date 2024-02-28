@@ -5,7 +5,7 @@ from Bio import SeqIO
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--assembly", help="File of genomic sequences", type =str)
+parser.add_argument("--input", help="File of genomic sequences", type =str)
 parser.add_argument("--in_format", help="Input format of genomic sequences", type =str, default="fasta")
 args = parser.parse_args()
 
@@ -13,7 +13,7 @@ args = parser.parse_args()
 seq_info = defaultdict(dict)
 
 counter = 0
-for seqobj in SeqIO.parse(args.assembly, args.in_format):
+for seqobj in SeqIO.parse(args.input, args.in_format):
     counter += 1
     with open(f"{seqobj.id}.fasta", 'w') as OUT:
         SeqIO.write(seqobj, OUT, "fasta")
