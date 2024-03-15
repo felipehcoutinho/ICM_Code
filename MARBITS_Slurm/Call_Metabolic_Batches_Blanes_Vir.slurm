@@ -4,7 +4,7 @@
 #############################################
 # JOB INFO
 #SBATCH --account=emm4
-#SBATCH --time=10-00:00:00
+#SBATCH --time=04-00:00:00
 #SBATCH --job-name=Metabolic_Blanes
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
@@ -13,7 +13,7 @@
 #SBATCH --error=/mnt/smart/users/fcoutinho/Job_Logs/jobLog_%A_%a.err
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=fhernandes@icm.csic.es
-#SBATCH --array=1-24%8
+#SBATCH --array=1,20%2
 
 ##############################################
 module load metabolic

@@ -25,7 +25,183 @@ phylum_custom_selection<-c("Actinobacteriota","Alphaproteobacteria","Cyanobacter
 full_vir_scaff_data<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Seq_Info/Info_VP_Rep_Propagated_Hosts_dsDNAphage_Blanes_virus.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
 summary(full_vir_scaff_data)
 
+###Parse metabolic output
+full_v_data<-rbind()
+for (i in c(1:20)) {
+    print(paste("Processing batch ",i,sep=""))
+    
+    in_file<-paste("/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Metabolic_Output/Metabolic_Outputs_Batch_",i,"/METABOLIC_result_each_spreadsheet/METABOLIC_result_worksheet4.tsv",sep="")
 
+    vdata<-read.table(file=in_file,sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+    
+    long_vdata<-melt(vdata,id=c("Module.step","Module","KO.id","Module.Category"),variable.name="Sequence",value.name="Module_Step_Presence")
+
+    f_long_vdata<-long_vdata[which(long_vdata$Module_Step_Presence == "Present"),]
+
+    f_long_vdata$Sequence<-as.factor(gsub("..full..full.Module.step.presence","",f_long_vdata$Sequence,perl=TRUE))
+
+    full_v_data<-rbind(full_v_data,f_long_vdata)
+}
+
+full_v_data<-as.data.frame(full_v_data)
+summary(full_v_data)
+
+write.table(full_v_data,file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Metabolic_Output/Blanes_Virus_Metabolic_Output_Present_Module_Steps.tsv",sep="\t",quote=FALSE,row.names=FALSE)
+
+
+###Abundance patterns
+#Read in the viral abundance data
+vir_scaff_abund<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/RPKM_Abundance_All_Genomic.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+dim(vir_scaff_abund)
+
+rownames<-vir_scaff_abund$Sequence
+
+vir_scaff_abund<-merge(vir_scaff_abund,subset(full_vir_scaff_data,select=c(Sequence,Population)),by="Sequence",all.x=TRUE)
+
+m_vir_scaff_abund<-melt(vir_scaff_abund,id=c("Sequence","Population"),value.name="Abundance",variable.name="Sample") # FPKM
+
+head(m_vir_scaff_abund)
+
+fm_vir_scaff_abund<-m_vir_scaff_abund[which(m_vir_scaff_abund$Abundance > 0),]
+
+vir_tax_counts<-as.data.frame(aggregate(fm_vir_scaff_abund$Abundance, by=list(Taxon=fm_vir_scaff_abund$Population,Sample=fm_vir_scaff_abund$Sample), FUN=sum))
+
+colnames(vir_tax_counts)[3]<-"Abundance"
+
+summary(vir_tax_counts)
+
+write.table(dcast(data=vir_tax_counts, formula = Taxon ~ Sample, fun.aggregate = sum, fill=0, value.var = "Abundance") ,file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/RPKM_Abundance_Sums_VP.tsv",sep="\t",quote=FALSE,row.names=FALSE)
+
+#vp_abd_df<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/RPKM_Abundance_Sums_VP.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+vir_tax_counts<-melt(vp_abd_df,id=c("Taxon"),value.name="Abundance",variable.name="Sample") # FPKM
+head(vir_tax_counts)
+
+m_vir_tax_counts<-vir_tax_counts[which(vir_tax_counts$Abundance >= 0),]
+
+m_vir_tax_counts$Date<-as.Date(gsub("BL","",m_vir_tax_counts$Sample),format="%y%m%d")
+
+summary(m_vir_tax_counts)
+
+library(dplyr)
+m_vir_tax_counts<-m_vir_tax_counts %>% arrange(Date)
+#m_vir_tax_counts$Sample<-factor(m_vir_tax_counts$Sample,levels=unique(m_vir_tax_counts$Date)[order(unique(m_vir_tax_counts$Date))])
+m_vir_tax_counts$Sample<-factor(m_vir_tax_counts$Sample,levels=as.character(unique(m_vir_tax_counts$Sample)))
+
+group_mean_abds<-as.data.frame(aggregate(m_vir_tax_counts$Abundance, by=list(Taxon=m_vir_tax_counts$Taxon), FUN=mean))
+
+m_vir_tax_counts$Taxon<-factor(m_vir_tax_counts$Taxon,levels=group_mean_abds$Taxon[order(group_mean_abds$x,decreasing=FALSE)])
+
+vp_h_data<-full_vir_scaff_data[which(full_vir_scaff_data$Population_Representative == "True" & !is.na(full_vir_scaff_data$Host_ID)),]
+
+m_vir_tax_counts<-merge(m_vir_tax_counts,vp_h_data[,c("Population","Domain","Phylum","Class")],by.x="Taxon",by.y="Population",all.x=TRUE)
+
+#summary(m_vir_tax_counts)
+head(m_vir_tax_counts)
+
+compl_col_grad<-rev(colorRampPalette(brewer.pal(11,"Spectral"))(n=100))
+
+summary(m_vir_tax_counts[which(m_vir_tax_counts$Date == "2022-12-13"),]) #BL221213
+summary(m_vir_tax_counts[which(m_vir_tax_counts$Date == "2008-01-15"),]) #BL080115
+
+#m_vir_tax_counts[which(m_vir_tax_counts$Abundance >= 500),]
+fig2B<-ggplot(m_vir_tax_counts,aes(fill=log10(Abundance),x=Sample,y=Taxon))+
+geom_tile()+
+theme_bw()+
+scale_fill_gradientn(colours = compl_col_grad)+
+scale_y_discrete(labels = NULL, breaks = NULL)+
+theme(axis.text.x = element_text(angle = 90,hjust = 1,size=8))+
+guides(fill=guide_legend(ncol=1))+xlab("Sample")+ylab("VP")
+
+ggsave("/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/Virus_Abundance_by_VP_Tileplots.pdf",plot=fig2B,device=cairo_pdf,width=25,height=10,pointsize=8)
+
+fig2B<-ggplot(m_vir_tax_counts,aes(fill=log10(Abundance),x=Sample,y=Taxon))+
+geom_tile()+
+theme_bw()+
+scale_fill_gradientn(colours = compl_col_grad)+
+scale_y_discrete(labels = NULL, breaks = NULL)+
+theme(axis.text.x = element_text(angle = 90,hjust = 1,size=8))+
+guides(fill=guide_legend(ncol=1))+xlab("Sample")+ylab("VP")+
+facet_grid(Phylum ~ ., scales="free_y")
+
+ggsave("/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/Virus_Abundance_by_VP_Tileplots_Split_Phylum.pdf",plot=fig2B,device=cairo_pdf,width=25,height=20,pointsize=8)
+
+
+
+####Abundanc eby host barplot
+#melt df, remove abundances of zero and unassinged sequences
+vir_scaff_abund<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/RPKM_Abundance_All_Genomic.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+dim(vir_scaff_abund)
+
+rownames<-vir_scaff_abund$Sequence
+
+vir_scaff_abund<-merge(vir_scaff_abund,subset(full_vir_scaff_data,select=c(Sequence,Phylum)),by="Sequence",all.x=TRUE)
+
+m_vir_scaff_abund<-melt(vir_scaff_abund,id=c("Sequence","Phylum"),value.name="Abundance",variable.name="Sample") # FPKM
+
+head(m_vir_scaff_abund)
+
+fm_vir_scaff_abund<-m_vir_scaff_abund[which((m_vir_scaff_abund$Abundance > 0) & !is.na(m_vir_scaff_abund$Phylum)),]
+
+head(fm_vir_scaff_abund)
+
+tax_level<-"Phylum"
+
+vir_tax_counts<-as.data.frame(aggregate(fm_vir_scaff_abund$Abundance, by=list(Taxon=fm_vir_scaff_abund[[tax_level]],Sample=fm_vir_scaff_abund$Sample), FUN=sum))
+
+colnames(vir_tax_counts)[3]<-"Abundance"
+
+summary(vir_tax_counts)
+
+m_vir_tax_counts<-vir_tax_counts[which(vir_tax_counts$Abundance >= 0),]
+
+m_vir_tax_counts$Date<-as.Date(gsub("BL","",m_vir_tax_counts$Sample),format="%y%m%d")
+
+summary(m_vir_tax_counts)
+
+library(dplyr)
+m_vir_tax_counts<-m_vir_tax_counts %>% arrange(Date)
+#m_vir_tax_counts$Sample<-factor(m_vir_tax_counts$Sample,levels=unique(m_vir_tax_counts$Date)[order(unique(m_vir_tax_counts$Date))])
+m_vir_tax_counts$Sample<-factor(m_vir_tax_counts$Sample,levels=as.character(unique(m_vir_tax_counts$Sample)))
+
+for (taxon in unique(m_vir_tax_counts$Taxon)) {
+	if (taxon %in% names(phylum_coloring)) {
+	} else {
+		print(paste(taxon," missing from color palette!",sep=""))
+	}
+	
+	if (taxon %in% taxon_order) {
+	} else {
+		print(paste(taxon," missing from custom taxon order!",sep=""))
+	}
+}
+
+
+#sub_phylum_coloring<-phylum_coloring[unique(m_vir_tax_counts$Taxon)]
+
+#sub_custom_taxon_order<-custom_taxon_order[custom_taxon_order %in% unique(m_vir_tax_counts$Taxon)]
+
+summary(m_vir_tax_counts)
+
+fig2B<-ggplot(m_vir_tax_counts,aes(y=Abundance,x=Sample,fill=Taxon))+
+geom_bar(position="stack",stat="identity",colour="black",alpha=0.9)+
+theme_bw()+
+#scale_fill_manual(name="Taxon",values=phylum_coloring)+ #,breaks=sub_custom_taxon_order
+theme(axis.text.x = element_text(angle = 90,hjust = 1,size=8))+
+guides(fill=guide_legend(ncol=1))+xlab("Sample")+ylab("RPKM")
+#scale_fill_manual(name="Taxon",values=sub_phylum_coloring,breaks=sub_custom_taxon_order)+
+
+ggsave("/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/Virus_Abundance_by_PHIST_Phylum_Barplots.pdf",plot=fig2B,device=cairo_pdf,width=25,height=10,pointsize=8)
+
+fig2B<-ggplot(m_vir_tax_counts,aes(y=Abundance,x=Sample,fill=Taxon))+
+geom_bar(position="stack",stat="identity",colour="black",alpha=0.9)+
+theme_bw()+
+#scale_fill_manual(name="Taxon",values=phylum_coloring)+ #,breaks=sub_custom_taxon_order
+theme(axis.text.x = element_text(angle = 90,hjust = 1,size=3))+
+guides(fill=guide_legend(ncol=1))+xlab("Sample")+ylab("RPKM")+
+facet_grid(Taxon ~ ., scales="free_y")
+#scale_fill_manual(name="Taxon",values=sub_phylum_coloring,breaks=sub_custom_taxon_order)+
+
+ggsave("/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/Virus_Abundance_by_PHIST_Phylum_Split_Barplots.pdf",plot=fig2B,device=cairo_pdf,width=20,height=15,pointsize=8)
 
 ###Raw phist preds (FT3)
 all_phist_preds<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/PHIST_Predictions/PHIST_Output_Clean_MAGs/Positive_PHIST_Predictions.csv",sep=",",header=TRUE,quote="",comment="",stringsAsFactors=TRUE,check.names=FALSE)
@@ -108,6 +284,8 @@ full_data2$Phylum<-as.factor(full_data2$Phylum)
 
 summary(full_data2$Phylum)
 
+summary(full_data2)
+
 write.table(full_data2,file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Info_VP_Rep_Propagated_Hosts_dsDNAphage_Blanes_virus.tsv",sep="\t",append=FALSE,row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 
@@ -115,118 +293,3 @@ write.table(full_data2,file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Info_V
 full_vir_scaff_data<-merge(vir_scaff_data,filtered_phist_preds,by="Virus_ID",all.x=TRUE)
 
 
-
-###Parse metabolic output
-for (i in 10:10) {
-    metabolic_data<-read.table(file=paste0("/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Metabolic_Output/Metabolic_Outputs_Batch_",i,"/METABOLIC_result_each_spreadsheet/METABOLIC_result_worksheet4.tsv"),sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
-    head(metabolic_data)
-}
-
-func_data<-read.table(file="/mnt/lustre/scratch/fcoutinho/Profiles_Malaspina/Assemblies_Round2/Metabat_Binning/Redo_MetaBat_Bins_Round_1/Metabolic_Preds/Profiles_Malaspina_MAGs_METABOLIC_Results/METABOLIC_result_each_spreadsheet/METABOLIC_result_worksheet4.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
-dim(func_data)
-
-long_func_data<-melt(func_data,id=c("Module.step","Module","KO.id","Module.Category"))
-
-colnames(long_func_data)<-c("Module_Step","Module_Name","KO_IDs","Module_Category","MAG","Module_Step_Presence")
-
-long_func_data$MAG<-gsub(".Module.step.presence$","",long_func_data$MAG,perl=TRUE)
-
-
-###Abundance patterns
-#Read in the viral abundance data
-vir_scaff_abund<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/RPKM_Abundance_All_Genomic.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
-dim(vir_scaff_abund)
-
-rownames<-vir_scaff_abund$Sequence
-
-vir_scaff_abund<-merge(vir_scaff_abund,subset(full_vir_scaff_data,select=c(Sequence,Population)),by="Sequence",all.x=TRUE)
-
-m_vir_scaff_abund<-melt(vir_scaff_abund,id=c("Sequence","Population"),value.name="Abundance",variable.name="Sample") # FPKM
-
-head(m_vir_scaff_abund)
-
-fm_vir_scaff_abund<-m_vir_scaff_abund[which(m_vir_scaff_abund$Abundance > 0),]
-
-vir_tax_counts<-as.data.frame(aggregate(fm_vir_scaff_abund$Abundance, by=list(Taxon=fm_vir_scaff_abund$Population,Sample=fm_vir_scaff_abund$Sample), FUN=sum))
-
-
-colnames(vir_tax_counts)[3]<-"Abundance"
-
-summary(vir_tax_counts)
-
-m_vir_tax_counts<-vir_tax_counts[which(vir_tax_counts$Abundance >= 0),]
-
-summary(m_vir_tax_counts)
-
-compl_col_grad<-rev(colorRampPalette(brewer.pal(11,"Spectral"))(n=100))
-
-fig2B<-ggplot(m_vir_tax_counts,aes(fill=log10(Abundance),x=Sample,y=Taxon))+
-geom_tile()+
-theme_bw()+
-scale_fill_gradientn(colours = compl_col_grad)+
-scale_y_discrete(labels = NULL, breaks = NULL)+
-theme(axis.text.x = element_text(angle = 90,hjust = 1,size=8))+
-guides(fill=guide_legend(ncol=1))+xlab("Sample")+ylab("VP")
-
-ggsave("Virus_Abundance_by_VP_Tileplots.pdf",plot=fig2B,device=cairo_pdf,width=25,height=10,pointsize=8)
-
-#melt df, remove abundances of zero and unassinged sequences
-m_vir_scaff_abund<-melt(vir_scaff_abund,id=c("Sequence","Phylum"),value.name="Abundance",variable.name="Sample") # FPKM
-
-head(m_vir_scaff_abund)
-
-fm_vir_scaff_abund<-m_vir_scaff_abund[which((m_vir_scaff_abund$Abundance > 0) & !is.na(m_vir_scaff_abund$Phylum)),]
-
-head(fm_vir_scaff_abund)
-
-tax_level<-"Phylum"
-
-vir_tax_counts<-as.data.frame(aggregate(fm_vir_scaff_abund$Abundance, by=list(Taxon=fm_vir_scaff_abund[[tax_level]],Sample=fm_vir_scaff_abund$Sample), FUN=sum))
-
-colnames(vir_tax_counts)[3]<-"Abundance"
-
-
-summary(vir_tax_counts)
-
-m_vir_tax_counts<-vir_tax_counts[which(vir_tax_counts$Abundance >= 100),]
-
-for (taxon in unique(m_vir_tax_counts$Taxon)) {
-	if (taxon %in% names(phylum_coloring)) {
-	} else {
-		print(paste(taxon," missing from color palette!",sep=""))
-	}
-	
-	if (taxon %in% taxon_order) {
-	} else {
-		print(paste(taxon," missing from custom taxon order!",sep=""))
-	}
-}
-
-
- [1] Actinobacteriota    Alphaproteobacteria Bacteroidota
- [4] Chloroflexota       Cyanobacteria       Gammaproteobacteria
- [7] Gemmatimonadota     Margulisbacteria    Marinisomatota
-[10] Myxococcota         Planctomycetota     Thermoplasmatota
-[13] Thermoproteota      Verrucomicrobiota   SAR324
-[16] DesulfobacterotaB   Bdellovibrionota    Latescibacterota
-
-
-#sub_phylum_coloring<-phylum_coloring[unique(m_vir_tax_counts$Taxon)]
-
-#sub_custom_taxon_order<-custom_taxon_order[custom_taxon_order %in% unique(m_vir_tax_counts$Taxon)]
-
-m_vir_tax_counts$Date<-as.Date(gsub("BL","",m_vir_tax_counts$Sample),format="%d%m%y")
-
-m_vir_tax_counts$Sample<-factor(m_vir_tax_counts$Sample,levels=sort(unique(m_vir_tax_counts$Sample)))
-
-summary(m_vir_tax_counts)
-
-fig2B<-ggplot(m_vir_tax_counts,aes(y=Abundance,x=Sample,fill=Taxon))+
-geom_bar(position="stack",stat="identity",colour="black",alpha=0.9)+
-theme_bw()+
-#scale_fill_manual(name="Taxon",values=phylum_coloring)+ #,breaks=sub_custom_taxon_order
-theme(axis.text.x = element_text(angle = 90,hjust = 1,size=8))+
-guides(fill=guide_legend(ncol=1))+xlab("Sample")+ylab("RPKM")
-#scale_fill_manual(name="Taxon",values=sub_phylum_coloring,breaks=sub_custom_taxon_order)+
-
-ggsave("Virus_Abundance_by_PHIST_Phylum_Barplots.pdf",plot=fig2B,device=cairo_pdf,width=25,height=10,pointsize=8)
