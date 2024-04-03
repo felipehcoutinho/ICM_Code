@@ -3,6 +3,8 @@ library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
 
+source("/mnt/smart/users/fcoutinho/ICM_Code/Microbiome_Analysis.R")
+
 debug<-TRUE
 ###Aesthetics
 #depth_col_pal<-brewer.pal(9,"Blues")[2:9]
@@ -24,6 +26,26 @@ phylum_custom_selection<-c("Actinobacteriota","Alphaproteobacteria","Cyanobacter
 ###Viral scaffold info
 full_vir_scaff_data<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Seq_Info/Info_VP_Rep_Propagated_Hosts_dsDNAphage_Blanes_virus.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
 summary(full_vir_scaff_data)
+
+###Viral Scaffold abundance RPKM
+vir_scaff_abund<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/RPKM_Abundance_All_Genomic.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+
+###NMDS
+###Missing Abundance for samples: BL161018 BL170124
+vir_scaff_abund$BL161018<-NULL
+vir_scaff_abund$BL170124<-NULL
+nmds_data<-calc_nmds(abd_df=t(vir_scaff_abund[,-1]),dist_metric="bray") 
+nmds_data$Date<-as.Date(gsub("BL","",nmds_data$Sample),format="%y%m%d")
+nmds_data$Time<-as.integer(nmds_data$Date)
+####NMDS Date
+figX<-ggplot(nmds_data, aes(x=NMDS1,y=NMDS2))+
+geom_point(size=3.5,shape=18, aes(colour=Date))+
+#very resistant to accepting any manual colour scales base don date
+#scale_colour_gradient(low="blue", high="red")+
+theme_bw()
+
+ggsave("/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/Virus_RPKM_Abundance_NMDS_Date.pdf",plot=figX,device=cairo_pdf,width=6,height=5,pointsize=8)
+
 
 ###Parse metabolic output
 full_v_data<-rbind()
@@ -51,7 +73,7 @@ write.table(full_v_data,file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Metab
 
 ###Abundance patterns
 #Read in the viral abundance data
-vir_scaff_abund<-read.table(file="/mnt/smart/users/fcoutinho/Blanes_Vir_Nestor/Abundance/Viruses/RPKM_Abundance_All_Genomic.tsv",sep="\t",header=TRUE,quote="",comment="",stringsAsFactors=TRUE)
+
 dim(vir_scaff_abund)
 
 rownames<-vir_scaff_abund$Sequence

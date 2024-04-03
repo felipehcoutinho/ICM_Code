@@ -13,6 +13,26 @@ library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
 
+
+###NMDS
+calc_nmds<-function(abd_df=NA,dist_metric="bray") {
+    library("vegan")
+    print(paste("Calculating",dist_metric,"distances",sep=" "))
+    dists<-vegdist(abd_df, method = dist_metric)
+
+    print("Calculating NMDS")
+    set.seed(666)
+    mdsresult<-metaMDS(dists,distance = dist_metric,k = 2,maxit = 999)
+    data.scores<-as.data.frame(scores(mdsresult))
+    data.scores$Sample<-rownames(data.scores)
+
+    nmds_data<-data.scores
+
+    print(summary(nmds_data))
+
+    return(nmds_data)
+}
+
 ###Take community DF as input and calculate abundance stats for each variable, mean and median abundance, prevalence (non zero counts acrosss samples), and standard deviationof abundance values
 calc_abund_stats<-function(abd_df=NA,exclude_cols=NA) {
     abd_df<-abd_df[,which(!(colnames(abd_df) %in% exclude_cols))]
