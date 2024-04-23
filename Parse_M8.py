@@ -25,6 +25,32 @@ def parse_m8(m8_files):
     for blast_m8_file in m8_files:
         print ('Parsing BLASTN output',blast_m8_file)
         seen_queries = defaultdict(dict)
+        #Iterare over blast_m8_file one line at a time using a filehandle
+        with open(blast_m8_file) as blast_m8:
+            for line in blast_m8:
+                #Split the line into fields
+                fields = line.strip().split("\t")
+                #Extract the query and subject IDs
+                query_id = fields[0]
+                subject_id = fields[1]
+                #Extract the e-value, bitscore, identity, and alignment length
+                evalue = float(fields[10])
+                bitscore = float(fields[11])
+                ident_pct = float(fields[2])
+                aln_span = int(fields[3])
+                #Check if the match passes the established cutoffs
+                if ((bitscore >= args.min_bitscore) or (evalue <= args.max_evalue) or (ident_pct >= args.min_identity) or (aln_span >= args.min_alignment)):
+                    if (query_id not in seen_queries.keys()):
+                        seen_queries[query_id] = 1
+                        scores[blast_m8_file][subject_id] += 1
+    return(scores)
+
+def parse_m8_searchIO(m8_files):
+    scores = defaultdict(lambda: defaultdict(int))
+    #Iterate over the blastn output files
+    for blast_m8_file in m8_files:
+        print ('Parsing BLASTN output',blast_m8_file)
+        seen_queries = defaultdict(dict)
         #Iterare over queries
         for qresult in SearchIO.parse(blast_m8_file, 'blast-tab'):
             #Iterate over hits in the query
@@ -41,11 +67,7 @@ def parse_m8(m8_files):
                             #initialize variables in the scores dictionary if they are not there already
     return(scores)
                             
-def check_match_cutoff(hsp,max_evalue,min_bitscore,min_ident,min_ali):
-    if ((hsp.bitscore < min_bitscore) or (hsp.evalue > max_evalue) or (hsp.ident_pct < min_ident) or (hsp.aln_span < min_ali)):
-        return False
-    else:
-        return True
+
 
 scores = parse_m8(args.m8_files)
 
