@@ -225,7 +225,7 @@ sub get_palette {
 	@colors = qw(#d11141 #00b159 #00aedb #f37735 #ffc425) if ($pal_name =~ /basic/i);
 	@colors = qw(#cccccc #a2a39f) if ($pal_name =~ /gray/i);
 	@colors = qw(#ffb3ba #ffdfba #ffffba #baffc9 #bae1ff) if ($pal_name =~ /pastel/i);
-	@colors = qw(#e6194b #3cb44b #ffe119 #0082c8 #f58231 #911eb4 #46f0f0 #f032e6 #d2f53c #fabebe #008080 #e6beff #aa6e28 #fffac8 #800000 #aaffc3 #808000 #ffd8b1 #000080 #808080) if ($pal_name =~ /sasha/i);
+	@colors = qw(#e6194b #3cb44b #ffe119 #0082c8 #f58231 #911eb4 #46f0f0 #f032e6 #d2f53c #fabebe #008080 #e6beff #aa6e28 #fffac8 #800000 #aaffc3 #808000 #ffd8b1 #000080 #808080) if ($pal_name =~ /sasha/i); #20 colors
 	@colors = ("#E62E2E","#E6CB2E","#62E62E","#2EE697","#2E97E6","#622EE6","#E62ECB") if ($pal_name =~ /rainbow7/i);
 	@colors = ("#E62E2E","#E69C2E","#C1E62E","#53E62E","#2EE677","#2EE6E6","#2E77E6","#532EE6","#C12EE6","#E62E9C")  if ($pal_name =~ /rainbow10/i);
 	@colors = ("#E62E2E","#E6772E","#E6C12E","#C1E62E","#77E62E","#2EE62E","#2EE677","#2EE6C1","#2EC1E6","#2E77E6","#2E2EE6","#772EE6","#C12EE6","#E62EC1","#E62E77") if ($pal_name =~ /rainbow15/i);

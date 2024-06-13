@@ -17,9 +17,9 @@
 ##############################################
 cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/DADA_Output/
 
-# module load muscle
+module load muscle
 
-# muscle -super5 All_ASV_Sequences.fasta -output Aligned_All_ASV_Sequences.fasta -threads 48
+muscle -super5 All_ASV_Sequences.fasta -output Aligned_All_ASV_Sequences.fasta -threads 48
 
 module load iqtree/2.0.6
 
@@ -27,3 +27,9 @@ module load iqtree/2.0.6
 iqtree2 -s Aligned_All_ASV_Sequences.fasta --mem 45G --threads-max 47 -m MFP
 
 mv Aligned_All_ASV_Sequences.fasta.treefile Aligned_All_ASV_MF.nwk
+
+
+#Generate iTOL decoration file
+module load perl
+
+perl /mnt/smart/users/fcoutinho/Repos/ICM_Code/Decorate_iTOL.pl --tree_file /mnt/smart/users/fcoutinho/DADA_Output/Aligned_All_ASV_MF.nwk --input_info_file DADA_Output/DADA2_ASVs_Info_Antarctic_Lagoons.tsv --color_category Phylum --min_trait_count 100 --color_palette sasha

@@ -13,6 +13,31 @@ library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
 
+###Note: for abundance matrixes, assumes that columns are taxa and that rows are samples
+
+
+###Diversity Metrics
+calc_div<-function(abd_df=NA) {
+    library("vegan")
+    shannon_div<-as.data.frame(diversity(abd_df, index = "shannon"))
+    shannon_div$Sample_UID<-rownames(shannon_div)
+    colnames(shannon_div)[1]<-"Shannon_Diversity_Index"
+
+    simp_div<-as.data.frame(diversity(abd_df, index = "simpson"))
+    simp_div$Sample_UID<-rownames(simp_div)
+    colnames(simp_div)[1]<-"Simpson_Diversity_Index"
+
+    spec_rich<-as.data.frame(specnumber(abd_df))
+    spec_rich$Sample_UID<-rownames(spec_rich)
+    colnames(spec_rich)[1]<-"Richness"
+
+    div_metrics<-merge(shannon_div,simp_div,by="Sample_UID",all.xy=TRUE)
+    div_metrics<-merge(div_metrics,spec_rich,by="Sample_UID",all.xy=TRUE)
+
+    div_metrics$Sample_UID<-as.factor(div_metrics$Sample_UID)
+
+    return(div_metrics)
+}
 
 ###NMDS
 calc_nmds<-function(abd_df=NA,dist_metric="bray") {
@@ -33,7 +58,7 @@ calc_nmds<-function(abd_df=NA,dist_metric="bray") {
     return(nmds_data)
 }
 
-###Take community DF as input and calculate abundance stats for each variable, mean and median abundance, prevalence (non zero counts acrosss samples), and standard deviationof abundance values
+###Take community DF as input and calculate abundance stats for each variable, mean and median abundance, prevalence (non zero counts acrosss samples), and standard deviation of abundance values
 calc_abund_stats<-function(abd_df=NA,exclude_cols=NA) {
     abd_df<-abd_df[,which(!(colnames(abd_df) %in% exclude_cols))]
     #calculate how many non zero values occur in each column of abd_df
@@ -62,7 +87,7 @@ calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE) {
     colnames(abd_df)[1]<-"Sample_UID"
     m_abd_df<-melt(abd_df,id="Sample_UID",variable.name="Taxon_UID",value.name="Abundance")
 
-    print(paste("Using as gruop var: ",first_group_var))
+    print(paste("Using as group var: ",first_group_var))
     #colnames(info_df)[colnames(info_df) == first_group_var]<-"Group"
     info_df$Group<-info_df[[first_group_var]]
     m_abd_df<-merge(m_abd_df,info_df[,c(colnames(info_df)[1],"Group")],by.x="Taxon_UID",by.y=c(colnames(info_df)[1]),all.x=TRUE)
