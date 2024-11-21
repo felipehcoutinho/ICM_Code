@@ -15,6 +15,33 @@ library(RColorBrewer)
 
 ###Note: for abundance matrixes, assumes that columns are taxa and that rows are samples
 
+###Pairwise correlations wih FDR adjusted p-values
+calc_pair_cor<-function(a_vars=NA,b_vars=NA,data_df=NA,method="spearman") {
+    correls_df<-rbind()
+    for (a_var in a_vars) {
+        for (b_var in b_vars) {
+            print(paste("Calculating correlation between",a_var,"and",b_var))
+            result_cor<-cor.test(data_df[[a_var]],data_df[[b_var]],method=method,alternative="two.sided",exact=FALSE,conf.level=0.95,na.option=na.omit)
+            correls_df<-rbind(c(a_var,b_var,result_cor$estimate,result_cor$p.value),correls_df)
+        }
+    }
+    colnames(correls_df)<-c("Variable_1","Variable_2","Correlation_Coefficient","P_Value")
+    
+    correls_df<-as.data.frame(correls_df)
+    correls_df$Correlation_Coefficient<-as.numeric(correls_df$Correlation_Coefficient)
+    correls_df$P_Value<-as.numeric(correls_df$P_Value)
+
+    correls_df$Variable_1<-as.factor(correls_df$Variable_1)
+    correls_df$Variable_2<-as.factor(correls_df$Variable_2)
+
+    correls_df$Adjusted_P_Value_FDR<-p.adjust(correls_df$P_Value,method="fdr")
+
+    correls_df$Method<-method
+    
+    summary(correls_df)
+
+    return(correls_df)
+}
 
 ###Diversity Metrics
 calc_div<-function(abd_df=NA) {
@@ -84,13 +111,17 @@ calc_abund_stats<-function(abd_df=NA,exclude_cols=NA) {
 
 ###Calc abundance sums by group
 calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE) {
+    #Assumes firt column of the abundance df to be sample identifiers
     colnames(abd_df)[1]<-"Sample_UID"
-    m_abd_df<-melt(abd_df,id="Sample_UID",variable.name="Taxon_UID",value.name="Abundance")
+    m_abd_df<-reshape2::melt(abd_df,id="Sample_UID",variable.name="Taxon_UID",value.name="Abundance")
 
     print(paste("Using as group var: ",first_group_var))
     #colnames(info_df)[colnames(info_df) == first_group_var]<-"Group"
+
+    #Assumes firt column of the info df to be Unique taxon identifiers
+    colnames(info_df)[1]<-"Taxon_UID"
     info_df$Group<-info_df[[first_group_var]]
-    m_abd_df<-merge(m_abd_df,info_df[,c(colnames(info_df)[1],"Group")],by.x="Taxon_UID",by.y=c(colnames(info_df)[1]),all.x=TRUE)
+    m_abd_df<-merge(m_abd_df,info_df[,c("Taxon_UID","Group")],by="Taxon_UID",all.x=TRUE)
 
     #Replace NA values in the Group column by "Unclassified"
     m_abd_df$Group<-as.character(m_abd_df$Group)
@@ -103,7 +134,7 @@ calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE) {
         print(summary(m_abd_df))
     }
 
-    group_abd_df<-dcast(m_abd_df,Sample_UID ~ Group,value.var="Abundance",fun.aggregate=sum,fill=0)
+    group_abd_df<-reshape2::dcast(m_abd_df,Sample_UID ~ Group,value.var="Abundance",fun.aggregate=sum,fill=0)
 
     return(group_abd_df)
 }

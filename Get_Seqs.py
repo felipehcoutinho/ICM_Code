@@ -8,7 +8,7 @@ parser.add_argument("--input_sequences", help="File containing the input sequenc
 parser.add_argument("--protein", help="IDs are genomes but input file is of protein sequences", default=False, type=bool)
 parser.add_argument("--matched_output_sequences", help="File to write matched output sequences", default='Matched_Sequences.fasta',type=str)
 parser.add_argument("--unmatched_output_sequences", help="File to write unmatched output sequences", default='Unmatched_Sequences.fasta',type=str)
-parser.add_argument("--list", help="Text file containing a list of IDs to bre retrieved from the input_sequences file", type=str)
+parser.add_argument("--list", help="Text file containing a list of IDs to be retrieved from the input_sequences file", type=str)
 parser.add_argument("--format_input", help="Format of the input sequences file", default='fasta', type=str)
 parser.add_argument("--format_output", help="Format of the output sequences file", default='fasta', type=str)
 parser.add_argument("--min_length", help="Minimum length of sequences to be include in the output file", default=0, type=int)
