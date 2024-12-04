@@ -110,24 +110,51 @@ calc_abund_stats<-function(abd_df=NA,exclude_cols=NA) {
 
 
 ###Calc abundance sums by group
-calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE) {
-    #Assumes firt column of the abundance df to be sample identifiers
-    colnames(abd_df)[1]<-"Sample_UID"
-    m_abd_df<-reshape2::melt(abd_df,id="Sample_UID",variable.name="Taxon_UID",value.name="Abundance")
+calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE,transpose_abd=FALSE,info_id_var=NA,abd_id_var=NA) {
+    if (transpose_abd == TRUE) {
+        print(paste("Transposing abundance DF"))
+        abd_df<-as.data.frame(t(abd_df))
+        abd_df<-as.data.frame(cbind(rownames(abd_df),abd_df))
+    }
 
-    print(paste("Using as group var: ",first_group_var))
-    #colnames(info_df)[colnames(info_df) == first_group_var]<-"Group"
+    #Unless otherwise specified in the call to the faction, assumes firt column of the info df to be sample identifiers
+    if (is.na(info_id_var)) {
+        info_id_var<-colnames(info_df)[1]
+    } 
+    print(paste("Using ",info_id_var,"as Taxon UID in info DF"))
+    info_df$Taxon_UID<-info_df[[info_id_var]]
 
-    #Assumes firt column of the info df to be Unique taxon identifiers
-    colnames(info_df)[1]<-"Taxon_UID"
+    #The grouping vairable must always be defined
+    if (is.na(first_group_var)) {
+        print("Must define one of the columns in the info df as the grouping variable")
+    } 
+    print(paste("Using as group var in info df: ",first_group_var))
     info_df$Group<-info_df[[first_group_var]]
-    m_abd_df<-merge(m_abd_df,info_df[,c("Taxon_UID","Group")],by="Taxon_UID",all.x=TRUE)
+
+    #Unless otherwise specified in the call to the faction, assumes firt column of the abundance df to be sample identifiers
+    if (is.na(abd_id_var)) {
+        abd_id_var<-colnames(abd_df)[1]
+    } 
+    
+    print(paste("Using as abundance UID var: ",abd_id_var))
+    abd_df$Taxon_UID<-abd_df[[abd_id_var]]
+
+    #Remove the previous identifier column in the abund df to avaoid having columns that are not sample abundance values
+    if (abd_id_var != "Taxon_UID") {
+        abd_df[[abd_id_var]]<-NULL
+    }
+    
+    #Add the relevant group into the abundance df as an additional COLUMN
+    abd_df<-merge(abd_df,info_df[,c("Taxon_UID","Group")],by="Taxon_UID",all.x=TRUE)
 
     #Replace NA values in the Group column by "Unclassified"
-    m_abd_df$Group<-as.character(m_abd_df$Group)
-    m_abd_df$Group[which(m_abd_df$Group == "NA")] <- "Unclassified"
-    m_abd_df$Group[which(m_abd_df$Group == "")] <- "Unclassified"
-    m_abd_df$Group<-as.factor(m_abd_df$Group)
+    abd_df$Group<-as.character(abd_df$Group)
+    abd_df$Group[which(abd_df$Group == "NA")] <- "Unclassified"
+    abd_df$Group[which(abd_df$Group == "")] <- "Unclassified"
+    abd_df$Group[which(is.na(abd_df$Group))] <- "Unclassified"
+    abd_df$Group<-as.factor(abd_df$Group)
+
+    m_abd_df<-reshape2::melt(abd_df,id=c("Taxon_UID","Group"),variable.name="Sample_UID",value.name="Abundance")
 
     if (debug == TRUE) {
         print("Summary of m_abd_df")

@@ -46,7 +46,7 @@
 # hmmsearch -o VP32xPfamA --tblout VP32xPfamA.tsv -T 50 --noali --cpu 23 /mnt/smart/users/fcoutinho/Databases/PfamA/Pfam-A.hmm VP32_original_Scaffold_k117_975715.faa
 
 ###Create IMGvr db to find close relatives
-module load mmseqs2/13-45111
+# module load mmseqs2/13-45111
 
 # cd /mnt/smart/users/fcoutinho/Databases/IMGVR/
 
@@ -56,18 +56,18 @@ module load mmseqs2/13-45111
 # rm -fr tmp/
 
 ###Query Proteins Against IMGvr db to find close relatives
-cd /mnt/smart/users/fcoutinho/TARA_Polar/VP32/
+# cd /mnt/smart/users/fcoutinho/TARA_Polar/VP32/
 
-mmseqs easy-search VP32_original_Scaffold_k117_975715.faa /mnt/smart/users/fcoutinho/Databases/IMGVR/IMGvrDB VP32_original_Scaffold_k117_975715xIMGvr.tsv tmp --threads 47 --max-seqs 1000 --min-seq-id 0.3 --min-aln-len 30
+# mmseqs easy-search VP32_original_Scaffold_k117_975715.faa /mnt/smart/users/fcoutinho/Databases/IMGVR/IMGvrDB VP32_original_Scaffold_k117_975715xIMGvr.tsv tmp --threads 47 --max-seqs 1000 --min-seq-id 0.3 --min-aln-len 30
 
-rm -fr tmp/
+# rm -fr tmp/
 
-#Calculate pairwise protein scores
-module load python
-python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --pairwise_protein_scores True --genome VP32_original_Scaffold_k117_975715.fasta --cds VP32_original_Scaffold_k117_975715.faa --pps_hits_table VP32_original_Scaffold_k117_975715xIMGvr.tsv
+# #Calculate pairwise protein scores
+# module load python
+# python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --pairwise_protein_scores True --genome VP32_original_Scaffold_k117_975715.fasta --cds VP32_original_Scaffold_k117_975715.faa --pps_hits_table VP32_original_Scaffold_k117_975715xIMGvr.tsv
 
-#Select close relatives with min 50% AAI and 40% shared genes
-awk -F "\t" '{ if (($3 >= 50) && ($5 >= 40)) { print } }'  VP32_original_Scaffold_k117_975715xIMGvr.tsv.Pairwise_Protein_Scores.tsv | cut -f 2 > List_of_IMGvr_Close_Relatives_AAI_50_Shared_Genes_40_Scaffold_k117_975715.txt 
+# #Select close relatives with min 50% AAI and 40% shared genes
+# awk -F "\t" '{ if (($3 >= 50) && ($5 >= 40)) { print } }'  VP32_original_Scaffold_k117_975715xIMGvr.tsv.Pairwise_Protein_Scores.tsv | cut -f 2 > List_of_IMGvr_Close_Relatives_AAI_50_Shared_Genes_40_Scaffold_k117_975715.txt 
 
 # ###Query proteins against uniprot using mmseqs2
 # module load mmseqs2/13-45111
@@ -80,3 +80,17 @@ awk -F "\t" '{ if (($3 >= 50) && ($5 >= 40)) { print } }'  VP32_original_Scaffol
 
 # #Separate target description from ID
 # sed -i 's/ /'$'\t''/'  VP32_original_Scaffold_k117_975715xUniprot.tsv
+
+
+###VP32 only bowtie abundance
+cd /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/
+
+module load python/3.8.5
+module load bowtie2/2.3.4.1
+module load samtools
+
+# python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/Short_TOPC_Cel_Fraction_Raw_Reads_Info.tsv --threads 23
+
+# python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --bowtiedb All_Genomic --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/TOPC_Cel_Fraction_Raw_Reads_Info.tsv --threads 23
+
+python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --bowtiedb All_Genomic --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/Metadata/TARA/TARA_All_Virome_File_Info+Metadata.tsv --threads 23 
