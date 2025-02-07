@@ -76,7 +76,7 @@ calc_nmds<-function(abd_df=NA,dist_metric="bray") {
     set.seed(666)
     mdsresult<-metaMDS(dists,distance = dist_metric,k = 2,maxit = 999)
     data.scores<-as.data.frame(scores(mdsresult))
-    data.scores$Sample<-rownames(data.scores)
+    data.scores$Sample_UID<-rownames(data.scores)
 
     nmds_data<-data.scores
 
@@ -124,7 +124,7 @@ calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE,tr
     print(paste("Using ",info_id_var,"as Taxon UID in info DF"))
     info_df$Taxon_UID<-info_df[[info_id_var]]
 
-    #The grouping vairable must always be defined
+    #The grouping variable must always be defined
     if (is.na(first_group_var)) {
         print("Must define one of the columns in the info df as the grouping variable")
     } 
@@ -137,11 +137,10 @@ calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE,tr
     } 
     
     print(paste("Using as abundance UID var: ",abd_id_var))
-    abd_df$Taxon_UID<-abd_df[[abd_id_var]]
-
-    #Remove the previous identifier column in the abund df to avaoid having columns that are not sample abundance values
+    
+    #Rename the previous identifier column in the abund df to ensure the Taxon_UID column is always present and to avoid adding extra columns
     if (abd_id_var != "Taxon_UID") {
-        abd_df[[abd_id_var]]<-NULL
+        colnames(abd_df)[which(colnames(abd_df) == abd_id_var)]<-"Taxon_UID"
     }
     
     #Add the relevant group into the abundance df as an additional COLUMN
@@ -167,8 +166,8 @@ calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE,tr
 }
 
 ###Expand host predictions
-library(data.table)
-expand_host<-function(seq_info_df,id_var,group_var,score_var,exp_vars) {
+expand_host<-function(seq_info_df,id_var,group_var,score_var,exp_vars,minimize_score) {
+    library(data.table)
 	# exp_vars=c("PHIST_MAG","PHIST_Phylum")
 	# score_var<-"PHIST_pvalue"
 	# id_var<-"Sequence" 
@@ -189,7 +188,13 @@ expand_host<-function(seq_info_df,id_var,group_var,score_var,exp_vars) {
 	gdata$group_var<-gdata[[group_var]]
 	gdata<-as.data.table(gdata)
 
-	f_gdata<-gdata[gdata[, .I[which.min(score_var)], by=group_var]$V1]
+    if (minimize_score == TRUE) {
+        print("Minimizing scores")
+	    f_gdata<-gdata[gdata[, .I[which.min(score_var)], by=group_var]$V1]
+    } else {
+        print("Maximizing scores")
+        f_gdata<-gdata[gdata[, .I[which.max(score_var)], by=group_var]$V1]
+    }
 
 	f_gdata<-as.data.frame(f_gdata)
 	gdata$score_var<-NULL
@@ -197,12 +202,11 @@ expand_host<-function(seq_info_df,id_var,group_var,score_var,exp_vars) {
 	f_gdata$score_var<-NULL
 	f_gdata$group_var<-NULL
 
-	exp_df<-merge(seq_info_df,subset(f_gdata,select=c(group_var,exp_vars)),by=group_var,all.x=TRUE,suffixes=c("",paste("_Expanded_by_",group_var,sep="")))
+	# exp_df<-merge(seq_info_df,subset(f_gdata,select=c(group_var,exp_vars)),by=group_var,all.x=TRUE,suffixes=c("",paste("_Expanded_by_",group_var,sep="")))
+	# print("Summary of expanded df:")
+	# print(summary(exp_df))
 
-	print("Summary of expanded df:")
-	print(summary(exp_df))
-
-	return(exp_df)
+	return(f_gdata)
 }
 
 #exp_full_vir_scaff_data<-expand_host(full_vir_scaff_data,id_var="Sequence",group_var="Population",score_var="PHIST_pvalue",exp_vars=c("PHIST_MAG","PHIST_Domain","PHIST_Phylum","PHIST_Class","PHIST_Order","PHIST_Family","PHIST_Genus","PHIST_Species"))

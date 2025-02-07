@@ -83,14 +83,35 @@
 
 
 ###VP32 only bowtie abundance
-cd /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/
+# cd /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/
 
-module load python/3.8.5
-module load bowtie2/2.3.4.1
-module load samtools
+# module load python/3.8.5
+# module load bowtie2/2.3.4.1
+# module load samtools
 
 # python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/Short_TOPC_Cel_Fraction_Raw_Reads_Info.tsv --threads 23
 
-# python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --bowtiedb All_Genomic --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/TOPC_Cel_Fraction_Raw_Reads_Info.tsv --threads 23
+#python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --bowtiedb All_Genomic --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/TOPC_Cel_Fraction_Raw_Reads_Info.tsv --threads 23
 
-python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --bowtiedb All_Genomic --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/Metadata/TARA/TARA_All_Virome_File_Info+Metadata.tsv --threads 23 
+#python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --bowtiedb All_Genomic --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/Metadata/TARA/TARA_All_Virome_File_Info+Metadata.tsv --threads 23
+
+###Calculate abundance in additional polar MGs not from TOPC
+# module load perl
+# perl /mnt/smart/users/fcoutinho/Repos/ICM_Code/download_SRA.pl --list test_sra_List.txt
+
+# while read sra_id; do echo "Processing ${i}"; //mnt/smart/shared/mlCourse/fcoutinho_data/sratoolkit.3.1.1-centos_linux64sratoolkit.2.11.3-ubuntu64/bin/prefetch $sra_id --output-directory . ; while read sra_id; do echo "Processing ${sra_id}"; echo -e "Sample\tGroup\tR1\tR2" > ${sra_id}_File_Info.tsv ; echo -e "${sra_id}\t${sra_id}\t${sra_id}_1.fastq\t${sra_id}_2.fastq" >> ${sra_id}_File_Info.tsv ; python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta --bowtiedb All_Genomic --abundance_table True --abundance_max_reads 10000000 --abundance_rpkm True --raw_read_table ${sra_id}_File_Info.tsv --threads 23 ; rm -f $sra_id*fastq ;done < test_sra_List.txt
+
+# cd /mnt/smart/users/fcoutinho/TARA_Polar/VP32/Abundance/
+
+# module load bowtie2/2.3.4.1
+# module load samtools
+
+#Not necessary tor edo the databae build step because jorge has done it before
+#bowtie2-build --threads 4 /mnt/smart/users/fcoutinho/TARA_Polar/VP32/VP32_original_Scaffold_k117_975715.fasta VP_32_DB
+
+#File SRA_ID_List.txt should contain the list of the SRA IDs compiled by Jorge and nothing else (one ID per line no extra spaces or tabulations, etc) 
+
+# while read sra_id; do echo "Processing ${sra_id}"; /mnt/smart/shared/mlCourse/fcoutinho_data/sratoolkit.3.1.1-centos_linux64/bin/prefetch $sra_id --output-directory . ; /mnt/smart/shared/mlCourse/fcoutinho_data/sratoolkit.3.1.1-centos_linux64/bin/fasterq-dump --split-files $sra_id ; bowtie2 -x VP_32_DB -q -1 ${sra_id}_1.fastq -2 ${sra_id}_2.fastq -S ${sra_id}.sam -k 1 -u 10000000 --sensitive --no-discordant --no-mixed --no-unal --threads 24 ; samtools view -bS ${sra_id}.sam > ${sra_id}.bam ; samtools sort ${sra_id}.bam -o ${sra_id}.sorted.bam ;  samtools index ${sra_id}.sorted.bam ; samtools idxstats ${sra_id}.sorted.bam > ${sra_id}.Counts.tsv ; rm -fr $sra_id ; rm -f $sra_id*fastq ; rm -f ${sra_id}.sam ${sra_id}.bam ; done < SRA_ID_List.txt
+
+
+
