@@ -15,7 +15,7 @@ parser.add_argument("--cds", help="Input fasta file of CDS protein sequences", t
 parser.add_argument("--ref", help="Optional Fasta file of reference protein sequences", type =str)
 parser.add_argument("--min_seq_len", help="The minimum sequence length to be included in the phylogeny", type =int, default=0)
 parser.add_argument("--max_seq_len", help="The maximum sequence length to be included in the phylogeny", type =int, default=999999)
-parser.add_argument("--pfam_db", help="The pfam Database file formated for Hmmer", type =str, default="/mnt/netapp2/Store_uni/COMPARTIDO/pfamdb/DB/Pfam-A.hmm")
+parser.add_argument("--pfam_db", help="The pfam Database file formated for Hmmer", type =str, default="/mnt/smart/users/fcoutinho/Databases/PfamA/Pfam-A.hmm") #/mnt/netapp2/Store_uni/COMPARTIDO/pfamdb/DB/Pfam-A.hmm
 parser.add_argument("--pfam_hits_file", help="The output of the hmmer search against Pfam (Will use this instead of searching if provided)", type =str, default="NA")
 parser.add_argument("--pfam_min_score", help="The minimum score to consider a pfam hit", type =int, default=50)
 parser.add_argument("--pfam_max_evalue", help="The maximum e-value to consider a pfam hit", type =float, default=0.00001)
@@ -43,7 +43,7 @@ parser.add_argument("--parse_only", help="Flag to skip running any programs and 
 parser.add_argument("--threads", help="Number of threads to use during analysis", default=1, type=int)
 parser.add_argument("--kegg_phylogeny", help="Flag to run the phylogeny module starting from KEGG hits", default=False, type=bool)
 parser.add_argument("--kegg_ko", help="KO to be used as reference for the KEGG phylogeny", type=str)
-parser.add_argument("--ko_hmm_dir", help="Directory where KEGG KO hmm models are located", default="/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/profiles/", type=str)
+parser.add_argument("--ko_hmm_dir", help="Directory where KEGG KO hmm models FOR PHYLOGENY are located", default="/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/profiles/", type=str)
 parser.add_argument("--derep_id", help="Identity threshold to dereplicate sequences when building KEGG phylogeny", default=1, type=float)
 
 args = parser.parse_args()
@@ -83,6 +83,29 @@ def central():
         calc_kegg_abundance_from_gene(abundance_file=args.gene_abundance,genome_mode=False)    
     if (args.kegg_phylogeny):
         build_phylogeny_from_kegg_hits(cds_file=args.cds,ref_file=args.ref,ko=args.kegg_ko,ko_hmm_dir=args.ko_hmm_dir)
+
+#Todo: Adjust function below to replace the diamond searches by mmseqs2 searches
+def call_mmseqs(genome_file,cds,pps_subject_fasta,pps_subject_db,precomp_hits_table):
+    prefix_genome_file = get_prefix(genome_file,args.in_format)
+    prefix_subject_fasta_file = get_prefix(pps_subject_fasta,'(faa)|(fasta)|(fa)')
+    prefix_subject_DB_file = get_prefix(pps_subject_db,args.in_format)
+    prefix_cds_file = get_prefix(cds,'(faa)|(fasta)|(fa)')
+    #Removed the index seqs line that used to be here,as any cds or gene files should be idnexed automatically. Gotta test it to make sure it works as intend in this function.
+    outfile = 'NA'
+    if (precomp_hits_table != "NA"):
+        outfile = precomp_hits_table
+    else:
+        if (pps_subject_db == 'NA'):
+            outfile = f'{prefix_cds_file}x{prefix_subject_fasta_file}.m8'
+            command = f'mmseqs easy-search {cds} {pps_subject_fasta} {outfile} tmp --threads {args.threads} --max-seqs 1000 --min-seq-id 0.3 --min-aln-len 30'
+            subprocess.call(command, shell=True)
+        else:
+            outfile = f'{prefix_cds_file}x{prefix_subject_DB_file}.m8'
+            command = f'mmseqs easy-search {cds} {pps_subject_db} {outfile} tmp --threads {args.threads} --max-seqs 1000 --min-seq-id 0.3 --min-aln-len 30'
+            subprocess.call(command, shell=True)
+    recip_scores = calc_recip_scores(outfile)
+    recip_scores_file = outfile+'.Pairwise_Protein_Scores.tsv'
+    print_scores(recip_scores,recip_scores_file,args.pps_min_aai,args.pps_min_matched,args.pps_min_perc_matched)
 
 def parse_hmmer_output(hmmer_out_file="NA",max_evalue=0.00001,min_score=50,multi_hits=False,prefix="NA",output_df_file="Info.tsv",print_df=True):
     genome_hmm_scores = defaultdict(dict)
