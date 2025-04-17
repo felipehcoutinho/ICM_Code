@@ -20,12 +20,12 @@ module load samtools
 
 #Rename seqs with unique IDs so they can be linked to appropriate files
 
-cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/GENOMES_Pyscrobacter_Sebas
+# cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/GENOMES_Pyscrobacter_Sebas
 
-for i in SQK*/MIFEST*/*.fna; do uid=$(echo "$i" | cut -d "/" -f 2 | sed 's/\-.*//g'); python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files $i --rename_seqs True --string_rename ${uid}_ ; mv All_Genomic.fasta ${uid}.fasta; done
+# for i in SQK*/MIFEST*/*.fna; do uid=$(echo "$i" | cut -d "/" -f 2 | sed 's/\-.*//g'); python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files $i --rename_seqs True --string_rename ${uid}_ ; mv All_Genomic.fasta ${uid}.fasta; done
 
 #Calc abundances 
 
 cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Isolate_Abundances/
 
-python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/Antarctic_Lagoons/GENOMES_Pyscrobacter_Sebas/*fasta --abundance_table True --abundance_rpkm True  --bowtie_k 10 --abundance_max_reads 10000000 --threads 23 --raw_read_table /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Metadata/WGS_Samples.tsv
+python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files mnt/smart/users/fcoutinho/Antarctic_Lagoons/GENOMES_Pyscrobacter_Sebas/All_Ray_Isolates_Genomic_Sequences.fasta --abundance_table True --abundance_rpkm True  --bowtie_k 10 --abundance_max_reads 10000000 --threads 23 --raw_read_table /mnt/smart/users/fcoutinho/Antarctic_Lagoons/GENOMES_Pyscrobacter_Sebas/short.tsv
