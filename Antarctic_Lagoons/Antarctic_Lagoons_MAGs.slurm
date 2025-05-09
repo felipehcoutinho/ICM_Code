@@ -7,8 +7,8 @@
 #SBATCH --time=02-00:00:00
 #SBATCH --job-name=Antartic_Lagoons
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
-#SBATCH --mem=50G
+#SBATCH --cpus-per-task=48
+#SBATCH --mem=75G
 #SBATCH --output=/mnt/smart/users/fcoutinho/Job_Logs/jobLog_%J.out
 #SBATCH --error=/mnt/smart/users/fcoutinho/Job_Logs/jobLog_%J.err
 #SBATCH --mail-type=ALL
@@ -46,89 +46,89 @@
 # mv All_Genomic.fasta Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.fasta
 
 ###Contib abundances for binning
-module load python/3.8.5
-module load bowtie2/2.3.4.1
-module load samtools
+# module load python/3.8.5
+# module load bowtie2/2.3.4.1
+# module load samtools
 
-cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/
+# cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/
 
-#Notice command below max reads is set to 1M to speed up for a trial run, and bowtie_k set to 100 becaseu the contigs detabase includes all contigs from all 20 samples and redundancy in read mapping is expected
-# python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.fasta --abundance_table True --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Metadata/WGS_Samples.tsv --bowtie_k 100 --abundance_max_reads 1000000 --threads 47
-#using the command above, many scaffolds have abundance of 0 in their own sample. Bins are not formed using the abundance file derived from it either
+# #Notice command below max reads is set to 1M to speed up for a trial run, and bowtie_k set to 100 becaseu the contigs detabase includes all contigs from all 20 samples and redundancy in read mapping is expected
+# # python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.fasta --abundance_table True --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Metadata/WGS_Samples.tsv --bowtie_k 100 --abundance_max_reads 1000000 --threads 47
+# #using the command above, many scaffolds have abundance of 0 in their own sample. Bins are not formed using the abundance file derived from it either
 
-python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.fasta --bowtiedb /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/All_Genomic --abundance_table True --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Metadata/WGS_Samples.tsv --bowtie_k 100 --abundance_max_reads 15000000 --threads 23
+# # python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.fasta --bowtiedb /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/All_Genomic --abundance_table True --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Metadata/WGS_Samples.tsv --bowtie_k 100 --abundance_max_reads 15000000 --threads 23
 
-module load metabat
-conda activate /mnt/smart/apps/condaEnvs/metabat-2.15
+# python3 /mnt/smart/users/fcoutinho/Repos/virathon/Virathon.py --genome_files /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.fasta --bowtiedb /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/All_Genomic --abundance_table True --abundance_rpkm True --raw_read_table /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Metadata/Subset_WGS_Samples.tsv --bowtie_k 100 --abundance_max_reads 15000000 --threads 47
 
-#/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Software/metabat/bin/jgi_summarize_bam_contig_depths
+# #Split scaffolds per sample
+# python3 /mnt/smart/users/fcoutinho/Repos/ICM_Code/Get_Seqs.py --input_sequences /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.fasta --id_split_sep _ --id_split_pos 0 --fetch_all True --group True
 
-jgi_summarize_bam_contig_depths --outputDepth JGI_Depths_Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.tsv *bam
+# #Metabat binning
+# module load metabat
+# conda activate /mnt/smart/apps/condaEnvs/metabat-2.15
 
-# module load python
+# #/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Software/metabat/bin/jgi_summarize_bam_contig_depths
 
-#Split scaffolds per sample
+# jgi_summarize_bam_contig_depths --outputDepth JGI_Depths_Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.tsv *bam
 
-python3 /mnt/smart/users/fcoutinho/Repos/ICM_Code/Get_Seqs.py --input_sequences /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.fasta --id_split_sep _ --id_split_pos 0 --fetch_all True --group True
+# #/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Software/metabat/bin/metabat2
 
-#/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Software/metabat/bin/metabat2
+# for i in C*.fasta; do smp=$(echo "$i" | sed 's/.fasta//g') ; echo $smp; metabat2 -i $i --abdFile  /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/JGI_Depths_Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.tsv -s 200000 -t 23 --outFile AL_R1_${smp}_Bin; done
 
-for i in C*.fasta; do smp=$(echo "$i" | sed 's/.fasta//g') ; echo $smp; metabat2 -i $i --abdFile  /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/JGI_Depths_Antarctic_Lagoons_All_Filtered_Scaffolds_2.5kbp.tsv -s 200000 -t 23 --outFile AL_R1_${smp}_Bin; done
+# conda deactivate
 
-conda deactivate
+# # rm -f C*fasta
 
-# rm -f C*fasta
+# mkdir /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_R1
 
-mkdir /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_R1
+# mv AL_R1_*Bin* /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_R1/
 
-mv AL_R1_*Bin* /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_R1/
+# cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_R1/
 
-cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_R1/
+# module load perl
 
-module load perl
+# #perl /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/assembly_stats_table.pl fa > AL_R1_Metabat_Bins_Assembly_Stats.tsv
 
-perl /mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/repos/ICM_Code/assembly_stats_table.pl fa > AL_R1_Metabat_Bins_Assembly_Stats.tsv
-
+# perl  /mnt/smart/users/fcoutinho/Repos/ICM_Code/assembly_stats_table.pl fa > AL_R1_Metabat_Bins_Assembly_Stats.tsv
 ###CheckM2 Bin QC
 # module load checkm2/1.0.1
 # conda activate /mnt/smart/apps/condaEnvs/checkm2
 
-# cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_R1/
+###CHECKM2 with custom conda env
+module load miniconda
+source /home/apps/miniconda/4.5.x/etc/profile.d/conda.sh
+conda activate /mnt/smart/users/fcoutinho/envs/checkm2
+export CHECKM2DB="/mnt/smart/apps/bio/app-databases/checkm2/uniref100.KO.1.dmnd"
 
-# checkm2 predict --input /mnt/smart/users/fcoutinho/OctoMicro/WGS_Assemblies/Metabat_Bins/*fa --threads 47 --output-directory CheckM2_Bin_QC
+cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/
 
-# cd  Metabat_Bins_R2/
-# checkm2 predict --input *fa --threads 12 --output-directory CheckM2_Bin_QC
+# export CHECKM2DB="/mnt/smart/apps/bio/app-databases/checkm2/uniref100.KO.1.dmnd"
 
-###CheckM1 R3 Bin QC
-# module load cesga/2020 checkm/1.2.2-python-3.9.9
+# # checkm2 predict --input /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_Subset/*fa --database_path /mnt/smart/apps/bio/app-databases/checkm2/uniref100.KO.1.dmnd --threads 23 --output-directory CheckM2_Bin_R1_Subset_QC
 
-# cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/OCTOMicro/
+checkm2 predict --input /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_Bins_R1/*fa --threads 47 --output-directory CheckM2_Bin_R1_QC --database_path /mnt/smart/apps/bio/app-databases/checkm2/uniref100.KO.1.dmnd
 
-# checkm lineage_wf -x fa -t 23 --pplacer_threads 12 --tab_table --file OctoMicro_Bins_R2_Checkm_Results.tsv Metabat_Bins_R3/ Checkm_Output_OctoMicro_Bins_R3/
+###Select MQ and HQ Bins
+awk -F "\t" '{ if (($2 >= 50) && ($3 <= 5)) { print } }' /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/CheckM2_Bin_R1_QC/quality_report.tsv | cut -f 1 > AL_MQ_and_HQ_Bins_R1_List.txt
 
-# ###Select MQ and HQ Bins
-# awk -F "\t" '{ if (($12 >= 50) && ($13 <= 5)) { print } }' OctoMicro_Bins_R2_Checkm_Results.tsv | cut -f 1 > OctoMicro_MQ_and_HQ_Bins_R3_List.txt
+mkdir AL_MAGs_R1
 
-# mkdir OctoMicro_MAGs_R3
+while read i; do cp AL_Bins_R1/${i}.fa AL_MAGs_R1/${i}.fa ; done < AL_MQ_and_HQ_Bins_R1_List.txt
 
-# while read i; do cp Metabat_Bins_R3/${i}.fa OctoMicro_MAGs_R3/${i}.fa ; done < OctoMicro_MQ_and_HQ_Bins_R3_List.txt
+module load gtdbtk/2.4.0
+source activate
+export PYTHONNOUSERSITE=1
 
-###GTDBtk
-# module purge
-# module load cesga/2020 gcccore/system gtdb-tk/2.3.2-python-3.9.9
+gtdbtk classify_wf --skip_ani_screen --extension fa --genome_dir AL_MAGs_R1/ --pplacer_cpus 12 --cpus 23 --prefix GTDBtk_Output_AL_MAGs_R1 --out_dir GTDBtk_Output_AL_MAGs_R1/ 
 
-# gtdbtk classify_wf --skip_ani_screen --extension fa --genome_dir OctoMicro_MAGs_R3/ --pplacer_cpus 12 --cpus 23 --prefix GTDBtk_Output_OctoMicro_MAGs_R3 --out_dir GTDBtk_Output_OctoMicro_MAGs_R3/ 
+###dRep MAGs
+module load drep
+cd /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/
 
+grep -w -f AL_MQ_and_HQ_Bins_R1_List.txt /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/CheckM2_Bin_R1_QC/quality_report.tsv > AL_MAGs_R1_CheckM_Info.tsv
 
-# ###Prokka mags R3
-# module load cesga/2020  gcccore/system  prokka/1.14.5
+#create a csv format in the specific format of drep, use regular expressions with sed to add extension to MAG names and convert to csv
+echo "genome,completeness,contamination" > AL_MAGs_R1_Info_for_dRep.csv
+cut -f 1,2,3 /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_MAGs_R1_CheckM_Info.tsv| grep -v "Name" | sed 's/\t/,/g'  |  sed -E 's/(_Bin\.[0-9]+)/\1.fa/g' >> AL_MAGs_R1_Info_for_dRep.csv
 
-# cd /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/OCTOMicro/OctoMicro_MAGs_R3/
-
-# for file in *.fa; do prokka --kingdom Bacteria --cpus 4 --noanno --outdir "Prokka_${file%.fa}" --prefix "${file%.fa}" --locustag "${file%.fa}" "$file" ; done ;
-
-# mkdir /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/OCTOMicro/Prokka_Output_OctoMicro_MAGs_R3
-
-# mv Prokka_* /mnt/lustre/scratch/nlsas/home/csic/eyg/fhc/OCTOMicro/Prokka_Output_OctoMicro_MAGs_R3/
-
+dRep dereplicate /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/dRep_AL_MAGs_R1/ -p 24 -comp 50 -con 5 -l 200000 --genomeInfo AL_MAGs_R1_Info_for_dRep.csv -g /mnt/smart/users/fcoutinho/Antarctic_Lagoons/Binning/AL_MAGs_R1/*fa

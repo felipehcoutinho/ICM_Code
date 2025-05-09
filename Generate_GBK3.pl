@@ -5,10 +5,12 @@ use Bio::SeqIO;
 use Bio::SeqFeature::Generic;
 use Bio::SeqFeatureI;
 
+my $output_file = "Output.gbk";
 my $nucleotide_file;
 my $protein_file;
 my $gff_file;
-my $annot;
+my $annot_file;
+my $func_position = 1;
 my $max_evalue = 0.001;
 my $min_bitscore = 30;
 my $min_algn = 0;
@@ -17,7 +19,9 @@ my $explode;
 my $skip_unk;
 
 GetOptions(
-'annot=s' => \$annot,
+'annot_file=s' => \$annot_file,
+'output_file=s' => \$output_file,
+'func_position=s' => \$func_position,
 'nucleotide_file=s' => \$nucleotide_file,
 'protein_file=s' => \$protein_file,
 'gff_file=s' => \$gff_file,
@@ -42,9 +46,9 @@ while (my $seq_obj = $seq_in->next_seq) {
 	$anots{"Sequence"}{$id}  = $peg_seq;
 }
 
-if ($annot) {	
-	print "Parsing $annot\n";
-	open INPUT, "< $annot" or die "$!";
+if ($annot_file) {	
+	print "Parsing $annot_file\n";
+	open INPUT, "< $annot_file" or die "$!";
 	while (my $line = <INPUT>) {
 		chomp $line;
 		my @values = split /\t/, $line;
@@ -57,7 +61,7 @@ if ($annot) {
 		next unless ($pass);
 		my $taxon = $values[-1];
 		
-		my @info = split /(\s)+n=(\d)+(\s)+Tax=/, $values[12];
+		my @info = split /(\s)+n=(\d)+(\s)+Tax=/, $values[$func_position];
 		my $function = $info[0];
 		$function =~ s/n=(\d)+(\s)+Tax=//;
 		$function =~ s/^(\w)+_(\w)+(\s)//;
@@ -107,7 +111,7 @@ if ($explode) {
 	}	
 } else {
 	$seq_in = Bio::SeqIO->new('-file' => "< $nucleotide_file", '-format' => "Fasta");
-	my $seq_out = Bio::SeqIO->new('-file' => "> Test.gbk", '-format' => "Genbank");
+	my $seq_out = Bio::SeqIO->new('-file' => "> $output_file", '-format' => "Genbank");
 	while (my $seq_obj = $seq_in->next_seq) {
 		my $oid = $seq_obj->id();
 		my $desc = $seq_obj->description();

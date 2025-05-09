@@ -44,7 +44,7 @@ parser.add_argument("--parse_only", help="Flag to skip running any programs and 
 parser.add_argument("--threads", help="Number of threads to use during analysis", default=1, type=int)
 parser.add_argument("--kegg_phylogeny", help="Flag to run the phylogeny module starting from KEGG hits", default=False, type=bool)
 parser.add_argument("--kegg_ko", help="KO to be used as reference for the KEGG phylogeny", type=str)
-parser.add_argument("--ko_hmm_dir", help="Directory where KEGG KO hmm models FOR PHYLOGENY are located", default="/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/profiles/", type=str)
+parser.add_argument("--ko_hmm_dir", help="Directory where KEGG KO hmm models FOR PHYLOGENY are located", default="/mnt/smart/users/fcoutinho/Databases/KEGG/Individual_KOs/profiles/", type=str) #/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/profiles/
 parser.add_argument("--derep_id", help="Identity threshold to dereplicate sequences when building KEGG phylogeny", default=1, type=float)
 
 args = parser.parse_args()
@@ -339,6 +339,7 @@ def build_phylogeny_from_kegg_hits(cds_file=None,ref_file=None,ko=None,ko_hmm_di
     else:
         list_protein_files = [cds_file]
     
+    index_seqs(cds_file=ref_file)
     list_nr_derep_protein_files = []
     for protein_file in list_protein_files:
         protein_vs_ko_outfile = call_hmmer(cds_file=protein_file,db_file=f"{ko}.hmm",program="hmmsearch")
@@ -363,11 +364,11 @@ def build_phylogeny_from_kegg_hits(cds_file=None,ref_file=None,ko=None,ko_hmm_di
     build_tree(input_file=aln_merged_nr_matched_file,output_file=tree_file)
 
 def build_tree(input_file=None,output_file=None):
-    command = f"FastTreeMP -nosupport -out {output_file} {input_file}"
+    command = f"FastTreeMP -nosupport {input_file} > {output_file}"
     subprocess.call(command, shell=True)  
     
 def align_seqs(input_file=None,output_file=None):
-    command = f"muscle -in {input_file} -out {output_file} -maxhours 24 -maxiters 3"
+    command = f"muscle -super5 {input_file} -output {output_file}"
     subprocess.call(command, shell=True)    
 
 def derep_seqs(input_file=None,output_file=None,cluster_id=1):

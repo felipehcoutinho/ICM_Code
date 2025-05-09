@@ -1,6 +1,6 @@
 library(RColorBrewer)
 library(genoPlotR)
-library(svglite, lib.loc="/mnt/lustre/bio/users/fcoutinho/Rlibs/")
+#library(svglite)#, lib.loc="/mnt/lustre/bio/users/fcoutinho/Rlibs/")
 
 args = commandArgs(trailingOnly=TRUE)
 gbk_file<-args[1]
