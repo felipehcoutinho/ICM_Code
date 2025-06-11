@@ -45,7 +45,7 @@ parser.add_argument("--threads", help="Number of threads to use during analysis"
 parser.add_argument("--kegg_phylogeny", help="Flag to run the phylogeny module starting from KEGG hits", default=False, type=bool)
 parser.add_argument("--kegg_ko", help="KO to be used as reference for the KEGG phylogeny", type=str)
 parser.add_argument("--ko_hmm_dir", help="Directory where KEGG KO hmm models FOR PHYLOGENY are located", default="/mnt/smart/users/fcoutinho/Databases/KEGG/Individual_KOs/profiles/", type=str) #/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/profiles/
-parser.add_argument("--derep_id", help="Identity threshold to dereplicate sequences when building KEGG phylogeny", default=1, type=float)
+parser.add_argument("--derep_id", help="Identity threshold to dereplicate sequences when building KEGG phylogeny. Default = 1. If set to 0 the dereplication step is skipped", default=1, type=float)
 
 args = parser.parse_args()
 
@@ -78,7 +78,7 @@ def central():
             kegg_hits_file = call_hmmer(cds_file=args.cds,db_file=args.kegg_db,program="hmmsearch")
         print(f"Using KEGG hits file: {kegg_hits_file}")
         (kegg_genome_hmm_scores,kegg_pairwise_scores) = parse_hmmer_output(hmmer_out_file=kegg_hits_file,min_score=args.kegg_min_score,max_evalue=args.kegg_max_evalue,multi_hits=False,prefix="KEGG",output_df_file="KEGG_Info.tsv")
-    print_results(cds_output_df_file=args.info_cds_output,genome_output_df_file=args.info_genome_output)
+        print_results(cds_output_df_file=args.info_cds_output,genome_output_df_file=args.info_genome_output)
     if (args.genome_abundance):
         calc_kegg_abundance_from_genome(abundance_file=args.genome_abundance,genome_mode=True)
     if (args.gene_abundance):
@@ -339,7 +339,9 @@ def build_phylogeny_from_kegg_hits(cds_file=None,ref_file=None,ko=None,ko_hmm_di
     else:
         list_protein_files = [cds_file]
     
-    index_seqs(cds_file=ref_file)
+    if ref_file:
+        index_seqs(cds_file=ref_file)
+    
     list_nr_derep_protein_files = []
     for protein_file in list_protein_files:
         protein_vs_ko_outfile = call_hmmer(cds_file=protein_file,db_file=f"{ko}.hmm",program="hmmsearch")
@@ -347,10 +349,12 @@ def build_phylogeny_from_kegg_hits(cds_file=None,ref_file=None,ko=None,ko_hmm_di
         #matched_cds_ids = list(protein_ko_pairwise_scores['Subject'].values())
         matched_cds_ids = {protein:True for protein in protein_ko_pairwise_scores['Subject'].values()}
         #print(f"Fetching: {matched_cds_ids}")
-        sub_protein_file = f"Matched_{ko}_"+get_prefix(protein_file,"(fasta)|(faa)|(fa)")+".fasta"
+        sub_protein_file = f"Matched_{ko}_"+get_prefix(protein_file,"(fasta)|(faa)|(fa)")+"fasta"
         subset_seqs(input_file=protein_file,output_file=sub_protein_file,ids_dict=matched_cds_ids,min_length=args.min_seq_len,max_length=args.max_seq_len)
-        nr_sub_protein_file = "NR_"+get_prefix(sub_protein_file,"fasta")+".fasta"
-        derep_seqs(input_file=sub_protein_file,output_file=nr_sub_protein_file,cluster_id=args.derep_id)
+        nr_sub_protein_file = sub_protein_file
+        if (args.derep_id > 0):
+            nr_sub_protein_file = "NR_"+get_prefix(sub_protein_file,"fasta")+"fasta"
+            derep_seqs(input_file=sub_protein_file,output_file=nr_sub_protein_file,cluster_id=args.derep_id)
         list_nr_derep_protein_files.append(nr_sub_protein_file)
     
     merged_nr_matched_file = f"Merged_NR_Matched_{ko}.faa"
