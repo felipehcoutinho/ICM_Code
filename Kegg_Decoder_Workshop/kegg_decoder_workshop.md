@@ -22,10 +22,12 @@
 ### Rename the sequence identifiers so they comply with Kegg-Decoder naming scheme (i.e. Genome ID is everything that comes before the first "_" character. The sequence IDs should NOT include characters "-", "_", or spaces)
 - Note: you might need to change "fna" in the command below to match the extension of your own files (e.g. fasta, or fas)
  
-`for genome in GCF_000011805*fna; do id=$(echo $genome | sed -e s'/_\+\|\W\+/./g' ); echo "Changing sequence IDs in" $genome "  to: " $id ; sed -i s"/>/>$id /g" "$genome" ; done`
+`for genome in *fna; do id=$(echo $genome | sed -e s'/_\+\|\W\+/./g' ); echo "Changing sequence IDs in" $genome "  to: " $id ; sed -i s"/>/>$id /g" "$genome" ; done`
 
 ### Call protein encoding genes with prodigal
 `module load prodigal`
+
+- Note: Here also replace all the occurrences of "genome%.fna" by "genome%.fasta" if necessary to match the naming of your files
 
 `for genome in *fna; do prodigal -q -p single -a "CDS_${genome%.fna}.faa" -d "Genes_${genome%.fna}.fna" -f gff -i $genome -o "${genome%.fna}.gff" ; done`
 
