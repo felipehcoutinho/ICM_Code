@@ -19,15 +19,17 @@
 ### Decompress files if necessary
 `gunzip *gz`
 
-### Rename the sequence identifiers so they comply with Kegg-Dcoder naming scheme (i.e. Genome ID is everything tha comes before the first "_" character )
-`for genome in *fna; do id=$(grep ">" "$genome" | head -n 1 | sed -e s'/,.*$//g' | sed -e s'/str.*$//g' |  sed -e s'/chromo.*$//g' |  sed s'/MAG: //g' |  sed s'/ /./g' | sed s'/_/./g' | sed -e s'/k99_.*/./g'); echo $id ; sed -i s"/>/$id /g" $genome ; done`
+### Rename the sequence identifiers so they comply with Kegg-Decoder naming scheme (i.e. Genome ID is everything that comes before the first "_" character. The sequence IDs should NOT include characters "-", "_", or spaces)
+- Note: you might need to change "fna" in the command below to match the extension of your own files (e.g. fasta, or fas)
+ 
+`for genome in GCF_000011805*fna; do id=$(echo $genome | sed -e s'/_\+\|\W\+/./g' ); echo "Changing sequence IDs in" $genome "  to: " $id ; sed -i s"/>/>$id /g" "$genome" ; done`
 
 ### Call protein encoding genes with prodigal
 `module load prodigal`
 
 `for genome in *fna; do prodigal -q -p single -a "CDS_${genome%.fna}.faa" -d "Genes_${genome%.fna}.fna" -f gff -i $genome -o "${genome%.fna}.gff" ; done`
 
-### Concatenate the protein sequence files
+### Concatenate the protein sequence files into a single file
 
 `cat *faa > All_CDS.faa`
 
@@ -36,7 +38,7 @@
 
 `hmmsearch --noali --tblout All_CDSxKOfam.tsv -o All_CDSxKOfam -E 0.001 --cpu 4 /mnt/smart/scratch/vir/felipe/Databases/KEGG/All_KOs.hmm All_CDS.faa`
 
-### Edit the output to
+### Edit the output to have only the two columns used by KEGG-Decoder
 `grep "ID=" All_CDSxKOfam.tsv | cut -d "-" -f 1,2 | sed 's/ //g' |  sed 's/-/\t/g'  > Parsed_All_CDSxKOfam.tsv`
 
 ### If not installed already, create and activate a keggdecoder enviroment with conda
