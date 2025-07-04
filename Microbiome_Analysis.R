@@ -15,6 +15,59 @@ library(RColorBrewer)
 
 ###Note: for abundance matrixes, assumes that columns are taxa and that rows are samples
 
+###Calc PCA
+calc_pca<-function(pca_df=NA,scale_data=TRUE) {
+    #Expects samples as rows and variables as columns. Sample names will be taken from rownames. No extra columns or non-numeric variables accepted.
+
+    print("Removing Samples containign NA values")
+    pca_df<-na.omit(pca_df)
+
+    sdata<-pca_df
+    if (scale_data == TRUE) {
+        print("Scaling data")
+        sdata<-as.data.frame(scale(pca_df,center=TRUE,scale=TRUE))
+    } else {
+        print("Data will not be scale")
+    }
+    
+    print("Summary of PCA data:")
+    print(summary(sdata))
+    
+    library("vegan")
+    print("Calculating PCA")
+
+    set.seed(666)
+    rdadata<-rda(sdata)
+    xlabel<-round((summary(rdadata)$cont$importance[2,1]*100),digits=1)
+    xlabel<-paste("PC1 (",xlabel,"% explained)",sep="")
+
+    ylabel<-round((summary(rdadata)$cont$importance[2,2]*100),digits=1)
+    ylabel<-paste("PC2 (",ylabel,"% explained)",sep="")
+
+    uscores <- data.frame(rdadata$CA$u)
+    vscores <- data.frame(rdadata$CA$v)
+
+    return(list(uscores=uscores,vscores=vscores,xlabel=xlabel,ylabel=ylabel))
+}
+###Split taxonomy(GTDBtk format)
+
+split_tax<-function(data_df=NA,tax_col="classification") {
+
+    data_df$Full_Classification<-data_df[[tax_col]]
+
+    data_df$classification<-gsub("((d__)|(p__)|(c__)|(o__)|(f__)|(g__)|(s__))","",data_df$classification,perl=TRUE)
+
+    data_df<-data_df %>% separate(classification, c("Domain","Phylum","Class","Order","Family","Genus","Species"),sep=";")
+
+    #replace empty string values in columns "Domain","Phylum","Class","Order","Family","Genus","Species" with "Unclassified":
+    for (level in c("Domain","Phylum","Class","Order","Family","Genus","Species")){
+        data_df[[level]][(which(data_df[[level]] == ""))]<-"Unclassified"  
+        data_df[[level]]<-as.factor(data_df[[level]])
+    }
+
+    return(data_df)
+}
+
 ###Pairwise correlations wih FDR adjusted p-values
 calc_pair_cor<-function(a_vars=NA,b_vars=NA,data_df=NA,method="spearman") {
     correls_df<-rbind()
@@ -253,17 +306,4 @@ scatter_fn_no_se <- function(data, mapping, method="p", use="pairwise", ...){
 
 	ggally_smooth_loess(data = data, mapping=mapping, se=FALSE, ...)+theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
-
-# sub_metadata_df<-metadata_df[,num_cols]
-
-# good_vars<-c("Temperature","Oxygen","ChlorophyllA","Carbon.total","Salinity","Gradient.Surface.temp.SST.","Fluorescence","CO3","HCO3","Density","PO4","PAR.PC","NO3","Si","Alkalinity.total","Ammonium.5m","Depth.Mixed.Layer","Lyapunov","NO2","Depth.Min.O2","NO2NO3","Nitracline","Brunt.Väisälä","Iron.5m","Depth.Max.O2","Okubo.Weiss","Residence.time","Mean.Chloro.HPLC.adjusted..mg.Chl.m3.","Mean.Flux.at.150m","NPP.8d.VGPM..mgC.m2.day.")
-
-# plot<-ggpairs(subset(metadata_df,select=good_vars),lower = list(continuous = scatter_fn_no_se),upper = list(continuous = cor_fn),aes(alpha = 0.5))
-
-# ggsave("Tara_Metadata_Correlogram.pdf",plot=plot,device=cairo_pdf,width=35,height=35, pointsize=8)
-
-# mdata<-melt(subset(metadata_df,select=c("Group",good_vars)),id=c("Group"),variable.name="Variable",value.name="Value")
-
-# plot<-ggplot(data=mdata,aes(y=Value))+geom_density()+coord_flip()+facet_wrap(Variable ~ ., ncol=6, scales="free")
-# ggsave("Tara_Metadata_Desnity.pdf",plot=plot,device=cairo_pdf,width=35,height=35, pointsize=8)
 
