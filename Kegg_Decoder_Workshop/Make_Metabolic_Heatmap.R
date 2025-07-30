@@ -2,7 +2,9 @@ library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
 
-metab_df<-read.table(file = "/mnt/smart/scratch/vir/felipe/Kegg_Decoder_Workshop/All_CDSxKOfam_Decoder.tsv", sep = "\t", header=TRUE, comment="",stringsAsFactors=TRUE,check.names=FALSE)
+args <- commandArgs(trailingOnly = TRUE)
+
+metab_df<-read.table(file = args[1], sep = "\t", header=TRUE, comment="",stringsAsFactors=TRUE,check.names=FALSE)
 
 colnames(metab_df)[1]<-"Genome"
 
