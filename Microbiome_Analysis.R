@@ -164,6 +164,7 @@ calc_abund_stats<-function(abd_df=NA,exclude_cols=NA) {
 
 ###Calc abundance sums by group
 calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE,transpose_abd=FALSE,info_id_var=NA,abd_id_var=NA) {
+    #Expected abd_df: SAMPLES AS COLUMNS, ROWS AS TAXA, first column is the taxon identifier
     if (transpose_abd == TRUE) {
         print(paste("Transposing abundance DF"))
         abd_df<-as.data.frame(t(abd_df))

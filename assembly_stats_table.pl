@@ -14,7 +14,7 @@ if (@ARGV == 1) {
 print "File\tContigs\tBases\tMax\tN50\tN90\n";
 
 foreach my $file (@files) {
-	my $result = `perl /mnt/smart/users/fcoutinho/Repos/ICM_Code/contig-stats.pl $file`;
+	my $result = `perl /mnt/smart/scratch/vir/felipe/Repos/ICM_Code/contig-stats.pl $file`;
 	$result .= "NA\n" unless ($result =~ /\n$/);
 	print "$file\t$result";
 }
