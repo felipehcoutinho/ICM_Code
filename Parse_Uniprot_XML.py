@@ -5,6 +5,7 @@ from collections import defaultdict
 import xml.etree.ElementTree as ET
 import pandas as pd
 import argparse
+import time
 
 #Xample xml entry from uniprot:
 # <?xml version="1.0" encoding="UTF-8"?>
@@ -121,45 +122,91 @@ parser.add_argument("--info_output", help="The output table file with the genera
 parser.add_argument("--fasta_output", help="The output fasta file", default="Sequences.fasta", type =str)
 args = parser.parse_args()
 
+    
 def parseXML(xml_files):
      # create empty list for entries
     seq_info = defaultdict(dict)
-    OUT = open(args.fasta_output,'w', newline='')
+    OUTSEQ = open(args.fasta_output,'w', newline='')
+    OUTINFO = open(args.info_output,'w', newline='')
+    #print the header to outinfo
+    OUTINFO.write("Accession\tName\tDescription\tLineage\tHost\tPfam_Domains\n")
     for xmlfile in xml_files:
-        print(f"Parsing {xmlfile}...")
-        # create element tree object
-        tree = ET.parse(xmlfile)
-        # get root element
-        root = tree.getroot()
-        
-        # iterate item_dict items
-        for item in root.findall('./uniprot:entry', namespaces={'uniprot': 'https://uniprot.org/uniprot'}):
-            #Get the accession number from the item
-            accession = item.find('./uniprot:accession', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
-            name = item.find('./uniprot:name', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
-            #Get the amino acid sequence from the item
-            sequence = item.find('./uniprot:sequence', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
-            #get protein, <recommendedName>. fullName
-            description = item.find('./uniprot:protein/uniprot:recommendedName/uniprot:fullName', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
-            #get all the taxa in lineage field
-            taxa_list = []
-            lineage = item.findall('./uniprot:organism/uniprot:lineage/uniprot:taxon', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
-            for element in lineage:
-                taxon = element.text
-                taxa_list.append(taxon)
-
-            #paste the elements of taxa_list into a tring separated by ;
-            seq_info["Name"][accession.text] = name.text
-            seq_info["Description"][accession.text] = description.text
-            seq_info["Lineage"][accession.text] = '; '.join(taxa_list)
-
-            seqobj = SeqRecord(id= accession.text,seq=Seq(sequence.text), description=description.text)
-            SeqIO.write(seqobj, OUT, "fasta")
+        print(f"Parsing {xmlfile}")
+        root = None
+        for event, elem in ET.iterparse(xmlfile, events=("start", "end")):
+            if event =='start':
+                if root is None: root = elem
+            elif event == 'end':
+                if len(root) > 0 and elem == root[0]:
+                    del root[0]
+                # process the tag
+                # if elem.tag == '{https://uniprot.org/uniprot}entry' and len(path) == 2:
+                if elem.tag == '{https://uniprot.org/uniprot}entry':
+                    # print(f"Found entry: {elem.tag} with attributes {elem.attrib}")
+                    accession = elem.find('./uniprot:accession', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                    name = elem.find('./uniprot:name', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                    #Get the amino acid sequence from the item
+                    sequence = elem.find('./uniprot:sequence', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                    #get protein, <recommendedName>. fullName
+                    description = elem.find('./uniprot:protein/uniprot:recommendedName/uniprot:fullName', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                    #get all the taxa in lineage field
+                    taxa_list = []
+                    lineage = elem.findall('./uniprot:organism/uniprot:lineage/uniprot:taxon', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                    for element in lineage:
+                        taxon = element.text
+                        taxa_list.append(taxon)
+                    #get the scientific name of the organism (last level of the taxonomy)
+                    tax_name = elem.find('./uniprot:organism/uniprot:name[@type="scientific"]', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                    if tax_name is not None:
+                        taxa_list.append(tax_name.text)
+                    #get the tax scientific names and tax ids of the hosts
+                    host_names = []
+                    host_tids =[]
+                    host_elems = elem.findall('./uniprot:organismHost', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                    if host_elems:
+                        for helement in host_elems:
+                            host_name = helement.find('./uniprot:name[@type="scientific"]', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                            #host_name = helement
+                            if host_name is not None:
+                                host_names.append(host_name.text)
+                    #get Pfam info
+                    pfam_doms = set()
+                    pfam_elems = elem.findall('./uniprot:dbReference[@type="Pfam"]', namespaces={'uniprot': 'https://uniprot.org/uniprot'})
+                    if pfam_elems:
+                        for pelement in pfam_elems:
+                            pfam_id = pelement.attrib.get('id')
+                            if pfam_id is not None:
+                                pfam_doms.add(pfam_id)
+                    #paste the elements of taxa_list into a tring separated by ;
+                    if (sequence.text is not None and sequence.text.strip() != "") and (accession is not None and accession.text is not None):
+                        # print(f"adding info for {accession.text}")
+                        final_description = description.text if description is not None else "Uncharacterized protein"
+                        # seq_info["Description"][accession.text] = final_description
+                        # seq_info["Name"][accession.text] = name.text
+                        # if name is not None:
+                        #     seq_info["Name"][accession.text] = name.text
+                        # # if description is not None:
+                        # # seq_info["Description"][accession.text] = description.text
+                        # if taxa_list:
+                        #     seq_info["Lineage"][accession.text] = ';'.join(taxa_list)
+                        # if host_names:
+                        #     seq_info["Host"][accession.text] = ';'.join(host_names)
+                        #seq_info["Host_Tax_IDs"][accession.text] = ';'.join(host_tids)
+                        tax_string = ';'.join(taxa_list)
+                        host_string = ';'.join(host_names) 
+                        full_desc_string = "||".join([final_description, tax_string, host_string])
+                        pfam_string = ';'.join(pfam_doms) if pfam_doms else 'NA'
+                        # add pfam info to description
+                        seqobj = SeqRecord(id= accession.text,seq=Seq(sequence.text), description=final_description)
+                        SeqIO.write(seqobj, OUTSEQ, "fasta")
+                        # write the info to the tsv file
+                        OUTINFO.write(f"{accession.text}\t{name.text if name is not None else 'NA'}\t{final_description}\t{tax_string}\t{host_string}\t{pfam_string}\n")
 
     return seq_info
 
 
-def savetoTSV(seq_info=None, filename="Seq_Info.tsv"):
+
+def savetoTSV(seq_info=None, filename=args.info_output):
     info_df = pd.DataFrame.from_dict(seq_info)
     info_df.index.name = 'Sequence'
     info_df.to_csv(filename,sep="\t",na_rep='NA')
@@ -168,9 +215,8 @@ def savetoTSV(seq_info=None, filename="Seq_Info.tsv"):
 def main():
     # parse xml file
     seq_info = parseXML(args.xml_files)
-
     # store item_dict items in a tsv file
-    savetoTSV(seq_info=seq_info)
+    #savetoTSV(seq_info=seq_info)
     
     
 if __name__ == "__main__":

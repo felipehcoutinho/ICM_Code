@@ -21,7 +21,7 @@ parser.add_argument("--pfam_min_score", help="The minimum score to consider a pf
 parser.add_argument("--pfam_max_evalue", help="The maximum e-value to consider a pfam hit", type =float, default=0.00001)
 parser.add_argument("--info_pfam_output", help="The Pfam hits info table file to be generated", type =str, default="Pfam_Info.tsv")
 parser.add_argument("--pfam_annotate", help="Flag to run Pfam search and parsing", type = bool, default=False)
-parser.add_argument("--kegg_db", help="The KEGG Database (KOfam) file formated for Hmmer", type =str, default="/mnt/smart/shared/mlCourse/fcoutinho_data/All_KOs.hmm") #/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/All_KOfam.hmm
+parser.add_argument("--kegg_db", help="The KEGG Database (KOfam) file formated for Hmmer", type =str, default="/mnt/smart/scratch/vir/felipe/Databases/KEGG/All_KOs.hmm") #/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/All_KOfam.hmm
 parser.add_argument("--kegg_hits_file", help="The output of the hmmer search against KEGG (Will use this instead of searching if provided)", type =str, default="NA")
 parser.add_argument("--kegg_min_score", help="The minimum score to consider a KEGG hit", type =int, default=50)
 parser.add_argument("--kegg_max_evalue", help="The maximum e-value to consider a KEGG hit", type =float, default=0.00001)
@@ -42,9 +42,16 @@ parser.add_argument("--genome_abundance", help="Optional Genomic Sequence Abunda
 parser.add_argument("--gene_abundance", help="Optional Gene Sequence Abundance matrix used to calculate KO, Pathway and Module abundances", type=str)
 parser.add_argument("--parse_only", help="Flag to skip running any programs and only parse their output", default=False, type=bool)
 parser.add_argument("--threads", help="Number of threads to use during analysis", default=1, type=int)
-parser.add_argument("--kegg_phylogeny", help="Flag to run the phylogeny module starting from KEGG hits", default=False, type=bool)
-parser.add_argument("--kegg_ko", help="KO to be used as reference for the KEGG phylogeny", type=str)
+parser.add_argument("--kegg_phylogeny", help="Flag to run the phylogeny module starting from hmm hits", default=False, type=bool)
+parser.add_argument("--kegg_ko", help="Hmm ids to be used as reference for the hmm phylogeny", type=str)
 parser.add_argument("--ko_hmm_dir", help="Directory where KEGG KO hmm models FOR PHYLOGENY are located", default="/mnt/smart/scratch/vir/felipe/Databases/KEGG/Individual_KOs/profiles/", type=str) #/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/profiles/
+parser.add_argument("--hmm_phylogeny", help="Flag to run the phylogeny module using hmm hits", default=False, type=bool)
+parser.add_argument("--hmm_ids", help="Hmm ids to be used as reference for the hmm phylogeny (one tree will be generated per hmm)", type=str, nargs="+")
+parser.add_argument("--db_hmm_phylogeny", help="The hmm formatted file containign models to be used for the phylogeny", default=None, type=str) #/mnt/netapp1/Store_CSIC/home/csic/eyg/fhc/Databases/KOfam/profiles/
+parser.add_argument("--phylo_min_score", help="The minimum score to consider a HMM hit  as valid for phylogenies", type =int, default=50)
+parser.add_argument("--phylo_max_evalue", help="The maximum e-value to consider a HMM hit  as valid for phylogenies", type =float, default=0.00001)
+parser.add_argument("--phylo_single_cds", help="Flag to only use the best CDS in each contig/genomic sequence matching the hmm (Default = False). If set to True only the CDS with the highest bitscore will be included in the alignments and phylogeny", type =bool, default=False)
+parser.add_argument("--clean_gvdb", help="Parse IDs considering that the protein sequences come from GVDB, i.e. and considers the genome identifer as everything before the first | or the first .fna or .fa or .fasta or .fas", default=False, type=bool)
 parser.add_argument("--derep_id", help="Identity threshold to dereplicate sequences when building KEGG phylogeny. Default = 1. If set to 0 the dereplication step is skipped", default=1, type=float)
 
 args = parser.parse_args()
@@ -78,50 +85,108 @@ def central():
             kegg_hits_file = call_hmmer(cds_file=args.cds,db_file=args.kegg_db,program="hmmsearch")
         print(f"Using KEGG hits file: {kegg_hits_file}")
         (kegg_genome_hmm_scores,kegg_pairwise_scores) = parse_hmmer_output(hmmer_out_file=kegg_hits_file,min_score=args.kegg_min_score,max_evalue=args.kegg_max_evalue,multi_hits=False,prefix="KEGG",output_df_file="KEGG_Info.tsv")
-        print_results(cds_output_df_file=args.info_cds_output,genome_output_df_file=args.info_genome_output)
+    
     if (args.genome_abundance):
         calc_kegg_abundance_from_genome(abundance_file=args.genome_abundance,genome_mode=True)
     if (args.gene_abundance):
         calc_kegg_abundance_from_gene(abundance_file=args.gene_abundance,genome_mode=False)    
     if (args.kegg_phylogeny):
         build_phylogeny_from_kegg_hits(cds_file=args.cds,ref_file=args.ref,ko=args.kegg_ko,ko_hmm_dir=args.ko_hmm_dir)
+    if (args.hmm_phylogeny):
+        build_hmm_phylogeny(cds_file=args.cds,ref_file=args.ref,profile_ids=args.hmm_ids)
 
-#Todo: Adjust function below to replace the diamond searches by mmseqs2 searches
-def call_mmseqs(genome_file="",cds_file="",db_file=""):
-    # prefix_genome_file = get_prefix(genome_file,args.in_format)
-    # prefix_subject_fasta_file = get_prefix(pps_subject_fasta,'(faa)|(fasta)|(fa)')
-    # prefix_subject_DB_file = get_prefix(pps_subject_db,args.in_format)
-    prefix_cds_file = get_prefix(cds_file,'(faa)|(fasta)|(fa)')
-    outfile = prefix_cds_file+'xRefDB.m8'
-    # if (precomp_hits_table != "NA"):
-    #     outfile = precomp_hits_table
-    # else:
-    # db_file = subject_fasta
-    # if (subject_db != ""):
-    #     db_file = subject_db
-    command = f'mmseqs easy-search {cds_file} {db_file} {outfile} tmp --threads {args.threads} --max-seqs 10 --min-seq-id 0.3 --min-aln-len 30 --format-mode 0 --format-output query,theader,pident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits'
-    subprocess.call(command, shell=True)
-    return outfile
+    print_results(cds_output_df_file=args.info_cds_output,genome_output_df_file=args.info_genome_output)
 
-def call_diamond (cds_file="NA",db_file=args.uniref_db,program="blastp"):
-    cds_file_prefix = get_prefix(cds_file,'(faa)|(fasta)|(fa)')
-    db_file_prefix = get_prefix(db_file,'dmnd')
-    outfile = 'NA'
-    if (program == 'blastp'):
-        outfile = cds_file_prefix+'x'+db_file_prefix+'.blastp'
-        if (args.parse_only == False):
-            print(f'Querying {cds_file} against {db_file}')
-            command = f'diamond blastp --index-chunks 1 --matrix BLOSUM45 --threads {args.threads} --more-sensitive --db {db_file} --outfmt 6 --query {cds_file} --max-target-seqs 10 --evalue 0.001 --out {outfile}'
-            subprocess.call(command, shell=True)    
-    else:
-        print('Not a valid DIAMOND program!')
-        
-    return outfile
+def build_hmm_phylogeny(cds_file=None,ref_file=None,profile_ids=None):
+    print("Building phylogeny from HMM hits")
+    #Query proteins against user specified HMM database
+    phylo_hits_file = call_hmmer(cds_file=args.cds,db_file=args.db_hmm_phylogeny,program="hmmsearch")
+    #Parse output and keep track of the best hits for each cds
+    (phylo_genome_hmm_scores,phylo_pairwise_scores) = parse_hmmer_output(hmmer_out_file=phylo_hits_file,min_score=args.phylo_min_score,max_evalue=args.phylo_max_evalue,multi_hits=False,prefix="Phylo",output_df_file="Phylo_HMM_Hits_Info.tsv")
+    #Go through the cds fasta file and split sequences according to best hit
+    compiled_obj = re.compile("_(\d)+$")
+    bar_rm = re.compile("\|.+$")
+    ext_rm = re.compile("(\.fna.+)|(\.fa.+)")
+    for seqobj in SeqIO.parse(cds_file, "fasta"):
+        cds_id = seqobj.id
+        scaffold_id = re.sub(compiled_obj,"",cds_id)
+        if (args.clean_gvdb == True):
+            scaffold_id = re.sub(ext_rm,"",scaffold_id)
+            scaffold_id = re.sub(bar_rm,"",scaffold_id)
+        if (cds_id in cds_seq_info['Phylo_Best_Subject']):
+            hmm_id = cds_seq_info['Phylo_Best_Subject'][cds_id]
+            if (hmm_id in profile_ids):  
+                if (args.phylo_single_cds == True) and (genome_seq_info[f'Phylo_{hmm_id}_Best_Match_ID'][scaffold_id] != cds_id):
+                    print(f"Skipping {cds_id} for {hmm_id} since {genome_seq_info[f'Phylo_{hmm_id}_Best_Match_ID'][scaffold_id]} has a better score")
+                    continue
+                out_fasta = f"{hmm_id}_hmm_phylo_seqs.faa"
+                with open(out_fasta, "a") as handle:
+                    SeqIO.write(seqobj, handle, "fasta")
+    
+    #Align each set of sequences and build a tree
+    for hmm_id in profile_ids:
+        input_file = f"{hmm_id}_hmm_phylo_seqs.faa"
+        aln_file = f"{hmm_id}_hmm_phylo_seqs_aln.faa"
+        tree_file = f"{hmm_id}_hmm_phylo_seqs_tree.newick"
+        align_seqs(input_file=input_file,output_file=aln_file)
+        # build_tree(input_file=aln_file,output_file=tree_file)
+
+
+def index_seqs(cds_file="NA"):
+    seen_cds_ids = dict()
+    seen_scaff_ids = dict()
+    print ("Indexing CDS sequences from",cds_file)
+    compiled_obj = re.compile("_(\d)+$")
+    bar_rm = re.compile("\|.+$")
+    ext_rm = re.compile("(\.fna.+)|(\.fa.+)")
+    seq_counter = 0
+    for seqobj in SeqIO.parse(cds_file, "fasta"):
+        cds_id = seqobj.id
+        #Do not allow duplicated IDs
+        if (cds_id in seen_cds_ids):
+            raise Exception(f'Duplicated ID: {seqobj.id} in {cds_file}')
+        seen_cds_ids[cds_id] = True
+        cds_seq_info['Length'][cds_id] = len(seqobj.seq)
+        cds_seq_info['KEGG_Best_Subject'][cds_id] = "NA"
+        cds_seq_info['KEGG_Best_Subject_Score'][cds_id] = 0
+        cds_seq_info['KEGG_Best_Subject_Function'][cds_id] = "NA"
+        cds_seq_info['KEGG_Best_Subject_Pathways'][cds_id] = set()
+        cds_seq_info['KEGG_Best_Subject_Modules'][cds_id] = set()
+        cds_seq_info['Pfam_Subjects'][cds_id] = set()
+        if (args.hmm_phylogeny == True):
+            cds_seq_info['Phylo_Best_Subject'][cds_id] = "NA"
+            cds_seq_info['Phylo_Best_Subject_Score'][cds_id] = 0
+            cds_seq_info['Phylo_Best_Subject_evalue'][cds_id] = "NA" 
+        scaffold_id = re.sub(compiled_obj,"",cds_id)
+        if (args.clean_gvdb == True):
+            scaffold_id = re.sub(ext_rm,"",scaffold_id)
+            scaffold_id = re.sub(bar_rm,"",scaffold_id)
+        #Initialize the genome info for the specific genomic sequence if it does not exist yet
+        if (scaffold_id not in seen_scaff_ids):
+            seen_scaff_ids[scaffold_id] = True
+            genome_seq_info['CDS_Count'][scaffold_id] = 0
+            genome_seq_info['KEGG_Matched_Subject_IDs'][scaffold_id] = set()
+            genome_seq_info['KEGG_Matched_Functions'][scaffold_id] = set()
+            genome_seq_info['KEGG_Matched_Pathways'][scaffold_id] = set()
+            genome_seq_info['KEGG_Matched_Modules'][scaffold_id] = set()
+            genome_seq_info['Pfam_Matched_Subjects'][scaffold_id] = set()
+            if (args.hmm_phylogeny == True):
+                for hmm_id in args.hmm_ids:
+                    genome_seq_info[f'Phylo_{hmm_id}_Best_Match_ID'][scaffold_id] = None
+                    genome_seq_info[f'Phylo_{hmm_id}_Best_Match_Score'][scaffold_id] = 0
+                
+        #Increment cds count of the scaffold
+        genome_seq_info['CDS_Count'][scaffold_id] += 1
+        seq_counter += 1
+        if (seq_counter % 100000 == 0):
+            print(f"Processed {seq_counter} sequences")
 
 def parse_hmmer_output(hmmer_out_file="NA",max_evalue=0.00001,min_score=50,multi_hits=False,prefix="NA",output_df_file="Info.tsv",print_df=True):
     genome_hmm_scores = defaultdict(dict)
     pairwise_scores = defaultdict(dict)
     hsp_count = 0
+    bar_rm = re.compile("\|.+$")
+    ext_rm = re.compile("(\.fna.+)|(\.fa.+)")
     #Parse the output
     print(f'Parsing {hmmer_out_file}')
     #Iterate over each query
@@ -132,11 +197,12 @@ def parse_hmmer_output(hmmer_out_file="NA",max_evalue=0.00001,min_score=50,multi
             for hsp in hit.hsps:
                 genome = hit.id
                 genome = re.sub('_(\d)+$','',genome)
+                if (args.clean_gvdb == True):
+                    genome = re.sub(ext_rm,"",genome)
+                    genome = re.sub(bar_rm,"",genome)
                 #print(qresult.id,genome,hit.id)
                 is_valid = check_hmmer_match_cutoff(hsp,max_evalue,min_score)
                 if is_valid:
-                    if (hit.id == "GCA.028281495.1.ASM2828149v1.genomic.fna_Seq_1_24"):
-                        print(f"Found a valid hit for {hit.id} in genome {genome} with subject  {qresult.id} and bitscore {hsp.bitscore}")
                     hsp_count += 1
                     pairwise_scores['Genome'][hsp_count] = genome
                     pairwise_scores['Query'][hsp_count] = qresult.id
@@ -172,8 +238,16 @@ def parse_hmmer_output(hmmer_out_file="NA",max_evalue=0.00001,min_score=50,multi
                         if (hsp.bitscore > cds_seq_info[prefix+'_Best_Subject_Score'][hit.id]):
                             cds_seq_info[prefix+'_Best_Subject'][hit.id] = qresult.id
                             cds_seq_info[prefix+'_Best_Subject_Score'][hit.id] = hsp.bitscore
-                            if (hit.id == "GCA.028281495.1.ASM2828149v1.genomic.fna_Seq_1_24"):
-                                print(f"Assigning new best hit for {hit.id} in genome {genome} with subject  {qresult.id} and bitscore {hsp.bitscore}")                                            
+                    if ((multi_hits == False) and (prefix == "Phylo")):
+                        #Add best hit data to cds info dictionary
+                        if (hsp.bitscore > cds_seq_info[prefix+'_Best_Subject_Score'][hit.id]):
+                            cds_seq_info[prefix+'_Best_Subject'][hit.id] = qresult.id
+                            cds_seq_info[prefix+'_Best_Subject_Score'][hit.id] = hsp.bitscore
+                            cds_seq_info[prefix+'_Best_Subject_evalue'][hit.id] = hsp.evalue
+                            if ((args.phylo_single_cds == True) and (qresult.id in args.hmm_ids) and (hsp.bitscore > genome_seq_info[f'Phylo_{qresult.id}_Best_Match_Score'][genome])):
+                                genome_seq_info[f'Phylo_{qresult.id}_Best_Match_ID'][genome] = hit.id
+                                genome_seq_info[f'Phylo_{qresult.id}_Best_Match_Score'][genome] = hsp.bitscore
+
     #Add the information of best hits only to genome_seq_info 
     print(f"Indexing {prefix} hits information")
     #Iterate over each query cds sequence for which a Best_Subject was found
@@ -211,43 +285,40 @@ def parse_hmmer_output(hmmer_out_file="NA",max_evalue=0.00001,min_score=50,multi
         info_df.index.name = 'Hit_#'
         info_df.to_csv(output_df_file,sep="\t",na_rep='NA') 
     return(genome_hmm_scores,pairwise_scores)
-             
+  
+#Todo: Adjust function below to replace the diamond searches by mmseqs2 searches
+def call_mmseqs(genome_file="",cds_file="",db_file=""):
+    # prefix_genome_file = get_prefix(genome_file,args.in_format)
+    # prefix_subject_fasta_file = get_prefix(pps_subject_fasta,'(faa)|(fasta)|(fa)')
+    # prefix_subject_DB_file = get_prefix(pps_subject_db,args.in_format)
+    prefix_cds_file = get_prefix(cds_file,'(faa)|(fasta)|(fa)')
+    outfile = prefix_cds_file+'xRefDB.m8'
+    # if (precomp_hits_table != "NA"):
+    #     outfile = precomp_hits_table
+    # else:
+    # db_file = subject_fasta
+    # if (subject_db != ""):
+    #     db_file = subject_db
+    command = f'mmseqs easy-search {cds_file} {db_file} {outfile} tmp --threads {args.threads} --max-seqs 10 --min-seq-id 0.3 --min-aln-len 30 --format-mode 0 --format-output query,theader,pident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits'
+    subprocess.call(command, shell=True)
+    return outfile
 
-def index_seqs(cds_file="NA"):
-    seen_cds_ids = dict()
-    seen_scaff_ids = dict()
-    print ("Indexing CDS sequences from",cds_file)
-    compiled_obj = re.compile("_(\d)+$")
-    seq_counter = 0
-    for seqobj in SeqIO.parse(cds_file, "fasta"):
-        cds_id = seqobj.id
-        #Do not allow duplicated IDs
-        if (cds_id in seen_cds_ids):
-            raise Exception(f'Duplicated ID: {seqobj.id} in {cds_file}')
-        seen_cds_ids[cds_id] = True
-        cds_seq_info['Length'][cds_id] = len(seqobj.seq)
-        cds_seq_info['KEGG_Best_Subject'][cds_id] = "NA"
-        cds_seq_info['KEGG_Best_Subject_Score'][cds_id] = 0
-        cds_seq_info['KEGG_Best_Subject_Function'][cds_id] = "NA"
-        cds_seq_info['KEGG_Best_Subject_Pathways'][cds_id] = set()
-        cds_seq_info['KEGG_Best_Subject_Modules'][cds_id] = set()
-        cds_seq_info['Pfam_Subjects'][cds_id] = set()
+def call_diamond (cds_file="NA",db_file=args.uniref_db,program="blastp"):
+    cds_file_prefix = get_prefix(cds_file,'(faa)|(fasta)|(fa)')
+    db_file_prefix = get_prefix(db_file,'dmnd')
+    outfile = 'NA'
+    if (program == 'blastp'):
+        outfile = cds_file_prefix+'x'+db_file_prefix+'.blastp'
+        if (args.parse_only == False):
+            print(f'Querying {cds_file} against {db_file}')
+            command = f'diamond blastp --index-chunks 1 --matrix BLOSUM45 --threads {args.threads} --more-sensitive --db {db_file} --outfmt 6 --query {cds_file} --max-target-seqs 10 --evalue 0.001 --out {outfile}'
+            subprocess.call(command, shell=True)    
+    else:
+        print('Not a valid DIAMOND program!')
         
-        scaffold_id = re.sub(compiled_obj,"",cds_id)
-        #Initialize the genome info for the specific genomic sequence if it does not exist yet
-        if (scaffold_id not in seen_scaff_ids):
-            seen_scaff_ids[scaffold_id] = True
-            genome_seq_info['CDS_Count'][scaffold_id] = 0
-            genome_seq_info['KEGG_Matched_Subject_IDs'][scaffold_id] = set()
-            genome_seq_info['KEGG_Matched_Functions'][scaffold_id] = set()
-            genome_seq_info['KEGG_Matched_Pathways'][scaffold_id] = set()
-            genome_seq_info['KEGG_Matched_Modules'][scaffold_id] = set()
-            genome_seq_info['Pfam_Matched_Subjects'][scaffold_id] = set()
-        #Increment cds count of the scaffold
-        genome_seq_info['CDS_Count'][scaffold_id] += 1
-        seq_counter += 1
-        if (seq_counter % 100000 == 0):
-            print(f"Processed {seq_counter} sequences")
+    return outfile
+
+           
 
 def calc_kegg_abundance_from_gene(abundance_file=None,genome_mode=False):
     gene_abund_df = pd.read_csv(abundance_file, sep='\t',index_col='Sequence',header=0)

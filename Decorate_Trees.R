@@ -17,6 +17,16 @@ library(stringr)
 args <- commandArgs(trailingOnly = TRUE)
 tree_file<-args[1]
 
+###Colour mapping for the trees
+
+#If adding new taxa, they must follow the order from highest tax rank to lowest
+tax_to_match<-c("Eukaryota","Archaea","Viruses","Bacteria","Alphaproteobacteria","Gammaproteobacteria","Actinomycetota","Cyanobacteriota","Bacteroidota","Marinisomatota")#,"Bacteria"
+
+tax_colors<-c(brewer.pal(n = 11, name = "Spectral")[c(1,3,11)],brewer.pal(n = 9, name = "Greys")[c(5)],brewer.pal(n = 12, name = "Paired")[c(1,2,3,4,7,8)])
+names(tax_colors)<-tax_to_match
+
+eco_colors<-c(brewer.pal(n = 12, name = "Paired")[c(1,2,9,8,4,12)])
+names(eco_colors)<-c("Freshwater","Marine","Non-marine Saline and Alkaline","Digestive system","Deep subsurface","Soil")
 
 load_paired_data<-function(KO) {
   #Read in the tree file from command line arguments, otherwise, manually replac ein the script to use a specific file
@@ -77,11 +87,11 @@ leaf_info$Ecosystem_Level_3<-as.factor(leaf_info$Ecosystem_Level_3)
 leaf_info$Ecosystem_Level_4<-as.factor(leaf_info$Ecosystem_Level_4)
 
 
-#Match sequences to selected taxa 
-#If adding new taxa, they must follow the orger from most generic to most specific
-tax_to_match<-c("Eukaryota","Archaea","Bacteria","Viruses","Alphaproteobacteria","Gammaproteobacteria","Actinomycetota","Cyanobacteriota","Bacteroidota","Marinisomatota")
+#Match sequences to selected taxa in tax_to_match
 
 leaf_info$Taxon<-NA
+
+leaf_info$Full_Lineage[grepl("MV_52",leaf_info$Sequence)]<-"Viruses"
 
 for (taxon in tax_to_match) {
   leaf_info$Taxon[grepl(taxon,leaf_info$Full_Lineage)]<-taxon
@@ -124,14 +134,6 @@ write.table(leaf_info,file=out_info_name,sep="\t",quote=FALSE,row.names=FALSE)
 
 ###The ids in highL-ids will be highlighted in the tree with the firebrick color
 highl_ids<-leaf_info$Sequence[grepl("MV_52",leaf_info$Sequence)]
-
-tax_to_match<-c("Eukaryota","Archaea","Bacteria","Viruses","Alphaproteobacteria","Gammaproteobacteria","Actinomycetota","Cyanobacteriota","Bacteroidota","Marinisomatota")
-
-tax_colors<-c(brewer.pal(n = 11, name = "Spectral")[c(1,3,9,11)],brewer.pal(n = 12, name = "Paired")[c(1,2,3,4,7,8)])
-names(tax_colors)<-tax_to_match
-
-eco_colors<-c(brewer.pal(n = 12, name = "Paired")[c(1,2,9,8,4,12)])
-names(eco_colors)<-c("Freshwater","Marine","Non-marine Saline and Alkaline","Digestive system","Deep subsurface","Soil")
 
 ###IMPORTANT: ggtree will use the FIRST column of the leaf_info df as the identifier of the sequences in the tree. Not the rownames and not not anything else. As of now, that should be the Alias2 column
 

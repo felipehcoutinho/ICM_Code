@@ -99,7 +99,8 @@ if ($explode) {
 	while (my $seq_obj = $seq_in->next_seq) {
 		my $oid = $seq_obj->id();
 		my $desc = $seq_obj->description();
-		$seq_obj->description("Unknown") if ($desc eq "");
+		$seq_obj->description($oid) if ($desc eq "");
+		$seq_obj->accession_number($oid);
 		my $seq_out = Bio::SeqIO->new('-file' => "> $oid.gbk", '-format' => "Genbank");
 		if (defined $feat_counts{$oid}) {
 			foreach my $feat_num (1..$feat_counts{$oid}) {
@@ -115,7 +116,8 @@ if ($explode) {
 	while (my $seq_obj = $seq_in->next_seq) {
 		my $oid = $seq_obj->id();
 		my $desc = $seq_obj->description();
-		$seq_obj->description("Unknown") if ($desc eq "");
+		$seq_obj->description($oid) if ($desc eq "");
+		$seq_obj->accession_number($oid);
 		if (defined $feat_counts{$oid}) {
 			foreach my $feat_num (1..$feat_counts{$oid}) {
 				my $feature = $seqs2feats{$oid}{$feat_num};
