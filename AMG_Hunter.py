@@ -490,6 +490,7 @@ def call_hmmer (cds_file="NA",db_file="NA",program="hmmscan"):
     return outfile
 
 def parse_uniref_raw(uniref_hits_file="NA",min_score=50,max_evalue=0.00001):
+
     print(f"Reading {uniref_hits_file}")
     with open(uniref_hits_file) as UNIREF_FH:
         compiled_obj = re.compile('(Uncharacterized)|(hypothetical)')
@@ -498,20 +499,31 @@ def parse_uniref_raw(uniref_hits_file="NA",min_score=50,max_evalue=0.00001):
             [cds,subject,perc_id,ali_len,mismatches,gap_open,qstart,qend,sstarts,send,evalue,bitscore] = line.split("\t")
             bitscore = float(bitscore)
             evalue = float(evalue)
+            verbose=False
+            if (cds == "A002_Scaffold_5486||full_1"):
+                verbose = True
             if ((bitscore >= min_score) and (evalue <= max_evalue)):
                 if (cds not in cds_seq_info['UniRef_Best_Hit_ID']):
                     cds_seq_info['UniRef_Best_Hit_ID'][cds] = subject
-                    cds_seq_info['UniRef_Best_Hit_Score'][cds] = bitscore  
+                    cds_seq_info['UniRef_Best_Hit_Score'][cds] = bitscore
+                    if verbose:
+                        print(f"Initial hit for {cds}: {subject} with score {bitscore}")  
                 if (bitscore > cds_seq_info['UniRef_Best_Hit_Score'][cds]):
                     cds_seq_info['UniRef_Best_Hit_ID'][cds] = subject
                     cds_seq_info['UniRef_Best_Hit_Score'][cds] = bitscore
+                    if verbose:
+                        print(f"New best hit for {cds}: {subject} with score {bitscore}")
                 if (not re.search(compiled_obj,subject)):
-                    if (cds not in cds_seq_info['UniRef_Best_NH_Hit_ID']):
+                    if (cds not in cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID']):
                         cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID'][cds] = subject
                         cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds] = bitscore
+                        if verbose:
+                            print(f"Initial non-hypothetical hit for {cds}: {subject} with score {bitscore}")
                     if (bitscore > cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds]):
                         cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID'][cds] = subject
                         cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds] = bitscore
+                        if verbose:
+                            print(f"New best non-hypothetical hit for {cds}: {subject} with score {bitscore}")
 
 
 def parse_uniref_enriched(uniref_hits_file="NA",min_score=50,max_evalue=0.00001):
@@ -547,28 +559,28 @@ def parse_uniref_enriched(uniref_hits_file="NA",min_score=50,max_evalue=0.00001)
                     cds_seq_info['UniRef_Best_Hit_Genus'][cds] = sgenus
                     cds_seq_info['UniRef_Best_Hit_Species'][cds] = sspecies
                 if (not re.search(compiled_obj,sdesc)):
-                    if (cds not in cds_seq_info['UniRef_Best_NH_Hit_ID']):
-                        cds_seq_info['UniRef_Best_NH_Hit_ID'][cds] = subject
-                        cds_seq_info['UniRef_Best_NH_Hit_Description'][cds] = sdesc
-                        cds_seq_info['UniRef_Best_NH_Hit_Score'][cds] = bitscore
-                        cds_seq_info['UniRef_Best_NH_Hit_Domain'][cds] = sdomain
-                        cds_seq_info['UniRef_Best_NH_Hit_Phylum'][cds] = sphylum
-                        cds_seq_info['UniRef_Best_NH_Hit_Class'][cds] = sclass
-                        cds_seq_info['UniRef_Best_NH_Hit_Order'][cds] = sorder
-                        cds_seq_info['UniRef_Best_NH_Hit_Family'][cds] = sfamily
-                        cds_seq_info['UniRef_Best_NH_Hit_Genus'][cds] = sgenus
-                        cds_seq_info['UniRef_Best_NH_Hit_Species'][cds] = sspecies
-                    if (bitscore > cds_seq_info['UniRef_Best_NH_Hit_Score'][cds]):
-                        cds_seq_info['UniRef_Best_NH_Hit_ID'][cds] = subject
-                        cds_seq_info['UniRef_Best_NH_Hit_Description'][cds] = sdesc
-                        cds_seq_info['UniRef_Best_NH_Hit_Score'][cds] = bitscore
-                        cds_seq_info['UniRef_Best_NH_Hit_Domain'][cds] = sdomain
-                        cds_seq_info['UniRef_Best_NH_Hit_Phylum'][cds] = sphylum
-                        cds_seq_info['UniRef_Best_NH_Hit_Class'][cds] = sclass
-                        cds_seq_info['UniRef_Best_NH_Hit_Order'][cds] = sorder
-                        cds_seq_info['UniRef_Best_NH_Hit_Family'][cds] = sfamily
-                        cds_seq_info['UniRef_Best_NH_Hit_Genus'][cds] = sgenus
-                        cds_seq_info['UniRef_Best_NH_Hit_Species'][cds] = sspecies
+                    if (cds not in cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID']):
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID'][cds] = subject
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Description'][cds] = sdesc
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds] = bitscore
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Domain'][cds] = sdomain
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Phylum'][cds] = sphylum
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Class'][cds] = sclass
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Order'][cds] = sorder
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Family'][cds] = sfamily
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Genus'][cds] = sgenus
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Species'][cds] = sspecies
+                    if (bitscore > cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds]):
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID'][cds] = subject
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Description'][cds] = sdesc
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds] = bitscore
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Domain'][cds] = sdomain
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Phylum'][cds] = sphylum
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Class'][cds] = sclass
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Order'][cds] = sorder
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Family'][cds] = sfamily
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Genus'][cds] = sgenus
+                        cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Species'][cds] = sspecies
 
 
 def parse_uniref_old(uniref_hits_file="NA",min_score=50,max_evalue=0.00001):
@@ -602,28 +614,28 @@ def parse_uniref_old(uniref_hits_file="NA",min_score=50,max_evalue=0.00001):
                 cds_seq_info['UniRef_Best_Hit_Genus'][cds] = sgenus
                 cds_seq_info['UniRef_Best_Hit_Species'][cds] = sspecies
             if (not re.search(compiled_obj,sdesc)):
-                if (cds not in cds_seq_info['UniRef_Best_NH_Hit_ID']):
-                    cds_seq_info['UniRef_Best_NH_Hit_ID'][cds] = subject
-                    cds_seq_info['UniRef_Best_NH_Hit_Description'][cds] = sdesc
-                    cds_seq_info['UniRef_Best_NH_Hit_Score'][cds] = bitscore
-                    cds_seq_info['UniRef_Best_NH_Hit_Domain'][cds] = sdomain
-                    cds_seq_info['UniRef_Best_NH_Hit_Phylum'][cds] = sphylum
-                    cds_seq_info['UniRef_Best_NH_Hit_Class'][cds] = sclass
-                    cds_seq_info['UniRef_Best_NH_Hit_Order'][cds] = sorder
-                    cds_seq_info['UniRef_Best_NH_Hit_Family'][cds] = sfamily
-                    cds_seq_info['UniRef_Best_NH_Hit_Genus'][cds] = sgenus
-                    cds_seq_info['UniRef_Best_NH_Hit_Species'][cds] = sspecies
-                if (bitscore > cds_seq_info['UniRef_Best_NH_Hit_Score'][cds]):
-                    cds_seq_info['UniRef_Best_NH_Hit_ID'][cds] = subject
-                    cds_seq_info['UniRef_Best_NH_Hit_Description'][cds] = sdesc
-                    cds_seq_info['UniRef_Best_NH_Hit_Score'][cds] = bitscore
-                    cds_seq_info['UniRef_Best_NH_Hit_Domain'][cds] = sdomain
-                    cds_seq_info['UniRef_Best_NH_Hit_Phylum'][cds] = sphylum
-                    cds_seq_info['UniRef_Best_NH_Hit_Class'][cds] = sclass
-                    cds_seq_info['UniRef_Best_NH_Hit_Order'][cds] = sorder
-                    cds_seq_info['UniRef_Best_NH_Hit_Family'][cds] = sfamily
-                    cds_seq_info['UniRef_Best_NH_Hit_Genus'][cds] = sgenus
-                    cds_seq_info['UniRef_Best_NH_Hit_Species'][cds] = sspecies
+                if (cds not in cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID']):
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID'][cds] = subject
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Description'][cds] = sdesc
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds] = bitscore
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Domain'][cds] = sdomain
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Phylum'][cds] = sphylum
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Class'][cds] = sclass
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Order'][cds] = sorder
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Family'][cds] = sfamily
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Genus'][cds] = sgenus
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Species'][cds] = sspecies
+                if (bitscore > cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds]):
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_ID'][cds] = subject
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Description'][cds] = sdesc
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Score'][cds] = bitscore
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Domain'][cds] = sdomain
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Phylum'][cds] = sphylum
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Class'][cds] = sclass
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Order'][cds] = sorder
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Family'][cds] = sfamily
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Genus'][cds] = sgenus
+                    cds_seq_info['UniRef_Best_Non_Hypothetical_Hit_Species'][cds] = sspecies
             
 def check_hmmer_match_cutoff(hsp,max_evalue,min_bitscore):
     if ((hsp.bitscore < min_bitscore) or (hsp.evalue > max_evalue)):

@@ -256,9 +256,9 @@ expand_host<-function(seq_info_df,id_var,group_var,score_var,exp_vars,minimize_s
 	f_gdata$score_var<-NULL
 	f_gdata$group_var<-NULL
 
-	# exp_df<-merge(seq_info_df,subset(f_gdata,select=c(group_var,exp_vars)),by=group_var,all.x=TRUE,suffixes=c("",paste("_Expanded_by_",group_var,sep="")))
-	# print("Summary of expanded df:")
-	# print(summary(exp_df))
+	exp_df<-merge(seq_info_df,subset(f_gdata,select=c(group_var,exp_vars)),by=group_var,all.x=TRUE,suffixes=c("",paste("_Expanded_by_",group_var,sep="")))
+	print("Summary of expanded df:")
+	print(summary(exp_df))
 
 	return(f_gdata)
 }

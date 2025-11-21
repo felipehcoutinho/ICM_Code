@@ -194,10 +194,10 @@ def parseXML(xml_files):
                         #seq_info["Host_Tax_IDs"][accession.text] = ';'.join(host_tids)
                         tax_string = ';'.join(taxa_list)
                         host_string = ';'.join(host_names) 
-                        full_desc_string = "||".join([final_description, tax_string, host_string])
+                        full_desc_string = "|".join([final_description, tax_string]) #, host_string
                         pfam_string = ';'.join(pfam_doms) if pfam_doms else 'NA'
                         # add pfam info to description
-                        seqobj = SeqRecord(id= accession.text,seq=Seq(sequence.text), description=final_description)
+                        seqobj = SeqRecord(id= accession.text,seq=Seq(sequence.text), description=full_desc_string) #description=final_description
                         SeqIO.write(seqobj, OUTSEQ, "fasta")
                         # write the info to the tsv file
                         OUTINFO.write(f"{accession.text}\t{name.text if name is not None else 'NA'}\t{final_description}\t{tax_string}\t{host_string}\t{pfam_string}\n")

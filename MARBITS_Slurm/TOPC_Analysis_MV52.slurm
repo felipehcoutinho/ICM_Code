@@ -21,7 +21,9 @@
 # module load prodigal
 
 # #NOTE: Very important to use prodigal in single mode for this virus, as the meta mode produces different results (possibly with truncated AMGs)
-# prodigal -q -p single -a MV52.faa -d MV52.fna -f gff -i MV52_Genomic.fasta -o MV52.gff
+prodigal -q -p single -a MV52.faa -d MV52.fna -f gff -i MV52_Genomic.fasta -o MV52.gff
+
+# /mnt/smart/scratch/vir/felipe/Software/prodigal-gv -q -p single -a MV52.faa -d MV52.fna -f gff -i ../MV52_Genomic.fasta -o MV52.gff
 
 
 # ###Pharokka Annotation

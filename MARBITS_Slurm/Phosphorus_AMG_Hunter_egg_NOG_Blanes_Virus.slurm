@@ -4,7 +4,7 @@
 #############################################
 # JOB INFO
 #SBATCH --account=emm4
-#SBATCH --time=07-12:00:00
+#SBATCH --time=45-12:00:00
 #SBATCH --job-name=AMG_Hunter_Blanes
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
@@ -37,3 +37,19 @@ grep -v "Role" /mnt/smart/scratch/vir/felipe/Blanes_Vir_Nestor/AMG_Hunter_Annota
 head -n 1 CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria.tsv > P_Best_Hits_CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria.tsv
 
 grep -w -f List_P_COGs.txt CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria.tsv >> P_Best_Hits_CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria.tsv
+
+
+###Search relevant cogs only
+# while read i; do cat  /mnt/smart/scratch/vir/felipe/Databases/eggNOG/2/${i}.hmm >> P_Metab_COGs.hmm; done < Ids.txt
+
+# hmmpress P_Metab_COGs.hmm
+
+# mkdir Relevant_Only
+
+# cd Relevant_Only
+
+# python3 /mnt/smart/scratch/vir/felipe/Repos/ICM_Code/AMG_Hunter.py --threads 12 --cds /mnt/smart/scratch/vir/felipe/Blanes_Vir_Nestor/Sequences/Viruses/dsDNAphage_Blanes_virus.faa --info_cds_output CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria_P_Metab_Only.tsv --info_genome_output Genome_Info_nfo_dsDNAphage_Blanes_VirusxeggNOG_Bacteria_P_Metab_Only --kegg_annotate True --kegg_db /mnt/smart/scratch/vir/felipe/Blanes_Vir_Nestor/AMG_Hunter_Annotation/MSebastian_Phosphorus/P_Metab_COGs.hmm --kegg_min_score 100
+
+# head -n 1 CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria_P_Metab_Only.tsv > Matched_P_COGs_CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria_P_Metab_Only.tsv
+
+# grep -w -f /mnt/smart/scratch/vir/felipe/Blanes_Vir_Nestor/AMG_Hunter_Annotation/MSebastian_Phosphorus/Ids.txt CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria_P_Metab_Only.tsv >> Matched_P_COGs_CDS_Info_dsDNAphage_Blanes_VirusxeggNOG_Bacteria_P_Metab_Only.tsv
