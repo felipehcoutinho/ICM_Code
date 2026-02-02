@@ -96,6 +96,86 @@ calc_pair_cor<-function(a_vars=NA,b_vars=NA,data_df=NA,method="spearman") {
     return(correls_df)
 }
 
+
+###pairwise mann whitney tests with FDR correction
+pairwise_mw<-function(input_df=NA,meta_df=NA,group_var=NA) {
+    #Expected abd_df, wide format: SAMPLES AS COLUMNS, ROWS AS variables to be tested, first column is the variable identifier
+    all_results<-as.data.frame(rbind())
+
+	rownames(input_df)<-input_df[,1] # first column names to rename rows
+	input_df<-input_df[,-1] # remove first column
+
+	rownames(meta_df)<-meta_df[,1] # first column names to rename rows
+	meta_df<-meta_df[,-1] # remove first column
+    
+    print(paste("Metadata DF dimensions after removing first column:",nrow(meta_df),"rows,",ncol(meta_df),"columns",sep=" "))
+
+    #make subset of the meta_df only containing sampels that are also in the abundance df
+    meta_df<-meta_df[which(rownames(meta_df) %in% colnames(input_df)),]
+
+    print(paste("Metadata DF dimensions after subsetting to match samples in abundance df:",nrow(meta_df),"rows,",ncol(meta_df),"columns",sep=" "))
+
+	# merge with metadata
+	valid_groups<-as.vector(na.omit(unique(meta_df[[group_var]])))
+
+    print(paste("Will compare following groups:",paste(valid_groups,sep=","),sep=" "))
+	
+	# empty vector to save pairs of values already seen
+	seen_combos<-c()
+	
+	for (groupA in valid_groups) {
+		#make subset of input df using only group A samples
+		groupA_samples<-rownames(meta_df)[which(meta_df[[group_var]] == groupA)] 
+		groupA_df<-input_df[,groupA_samples]	
+		for (groupB in valid_groups) {
+			#Avoid testing a group of samples against itself
+			if (groupA == groupB) { next }
+			#Avoid testing groupB against A if A has already been tested against B
+            combo<-paste(groupA,groupB,sep="_")
+			if (combo %in% seen_combos) { next }
+			# add to the list to no repeat the same analysis
+			seen_combos<-c(seen_combos,paste(groupA,groupB,sep="_"))
+            seen_combos<-c(seen_combos,paste(groupB,groupA,sep="_"))
+
+			#make subset of input df using only group B samples
+			groupB_samples<-rownames(meta_df)[which(meta_df[[group_var]] == groupB)] 
+			groupB_df<-input_df[,groupB_samples]
+
+			#Iterate over each row of the input df		
+			for (rownum in 1:nrow(input_df)) {
+				var<-rownames(input_df)[rownum]
+				
+				#get a vactor of values for the variable being tested from groupA and groupB
+                # Add 1 to everything so that FC can be calculated when the mean is 0
+				vals_groupA<-as.numeric(groupA_df[rownum,])+1
+				vals_groupB<-as.numeric(groupB_df[rownum,])+1
+				
+				# perform Mann-Whitney test
+				test_result<-wilcox.test(vals_groupA,vals_groupB) 
+				
+				# add rows with results to a dataframe (from the test, save the p-value)
+                #print(c(var,groupA,groupB,mean(vals_groupA),mean(vals_groupB),mean(vals_groupA)/mean(vals_groupB),log10(mean(vals_groupA)/mean(vals_groupB)),test_result$p.value))
+				all_results<-rbind(all_results,c(var,groupA,groupB,mean(vals_groupA),mean(vals_groupB),mean(vals_groupA)/mean(vals_groupB),log10(mean(vals_groupA)/mean(vals_groupB)),test_result$p.value)) 
+				
+			}
+		}
+	}
+
+	colnames(all_results)<-c("Variable","Group_A","Group_B","Mean_A","Mean_B","Fold_Change","Log10_Fold_Change","p_value")
+	all_results<-as.data.frame(all_results)
+	all_results$Variable<-as.factor(all_results$Variable)
+	all_results$Group_A<-as.factor(all_results$Group_A)
+	all_results$Group_B<-as.factor(all_results$Group_B)
+	all_results$Mean_A<-as.numeric(all_results$Mean_A)
+	all_results$Mean_B<-as.numeric(all_results$Mean_B)
+	all_results$Fold_Change<-as.numeric(all_results$Fold_Change)
+	all_results$Log10_Fold_Change<-as.numeric(all_results$Log10_Fold_Change)
+	all_results$p_value<-as.numeric(all_results$p_value)
+	all_results$Adjusted_P_Value_FDR<-p.adjust(all_results$p_value,method="fdr")
+	return(all_results)
+}
+
+
 ###Diversity Metrics
 calc_div<-function(abd_df=NA) {
     library("vegan")

@@ -118,7 +118,7 @@ modorder_clean_df<-as.data.frame(mod@moduleWeb)
 # nullobj<-vegan::nullmodel(clean_df, method='curveball')
 # vegan_null_models <-simulate(nullobj, nsim=10, seed=666)
 
-null_models <- bipartite::nullmodel(web=clean_df, N=100, method='r2d')
+null_models <- bipartite::nullmodel(web=clean_df, N=1000, method='r2d')
 
 #calculate null model emtrics
 # H2_nulls <- sapply(null_models, function(x) H2fun(x)$H2)
@@ -127,13 +127,11 @@ null_models <- bipartite::nullmodel(web=clean_df, N=100, method='r2d')
 #H2 will be higher the more specialized the network is, i.e. in a netwrok where all virus infect all hosts equally, H2 would be 0
 H2_nulls <- sapply(null_models, H2fun, H2_integer=FALSE)
 
-#Network metrics
+#Network metrics calculate the specialization level for the whole network (h2)
 netlvl_metrics<-networklevel(clean_df, index=c("H2"))
 
-#calculate the specialization level for the whole network
-# h2_metric<-H2fun(clean_df,H2_integer=FALSE)
-
-# the df containing d' values has less rows than clean_df. Some viruses are eing excluded with no warning. Perhaps this happens bc they dont have any non-zero values (i.e. are only mapped to sags for whic the taxon is NA)
+#calculate specialization levels using a null model 
+# the df containing d' values has less rows than clean_df. Some viruses are eing excluded with no warning. This happens bc they dont have any non-zero values (i.e. are only mapped to sags for which the taxon is NA)
 d_nulls<- sapply(null_models, specieslevel, index=c("d"), level="lower")
 
 null_metrics<-c() #as.data.frame()
@@ -163,29 +161,33 @@ null_metrics_stats$viral_contig<-as.factor(null_metrics_stats$viral_contig)
 
 #calculate the individual speclization index of each virus as defined by Bluthgen 10.1186/1472-6785-6-9
 # More specialized viruses will have higher d'
-#taxa that map reads to many differnt viruses will have low d' 
+# taxa that map reads to many differnt viruses will have low d' 
 
 splvl_metrics<-specieslevel(clean_df, level="lower", index=c("d"))
-
 splvl_metrics$viral_contig<-as.factor(rownames(splvl_metrics))
 
+#merge with the stats from the null models
 splvl_metrics<-merge(splvl_metrics,null_metrics_stats,by="viral_contig",all.x=T)
 
+#calculate the fold, i.e. the specialization index observed for the viral contig compared to those ifnerred from the null model
 splvl_metrics$fold<-splvl_metrics$d/splvl_metrics$Mean
 
-fold_order<-as.character(splvl_metrics$viral_contig[order(splvl_metrics$fold)])
-#Below I tried to do the heatmap only for the high quality contigs , but it doe snot work because names are not matching with those in the vinfo table. Xabi's new tables will fix this
-figA<-ggplot()+
+#Plot the raw d values, the fold and the maximum d value observed in the null models for each virus
+col_pal<-brewer.pal(11,"Spectral")
+spectral_grad<-rev(colorRampPalette(col_pal)(n=100))
+
+fold_order<-as.character(splvl_metrics$viral_contig)[order(splvl_metrics$fold)]
+splvl_metrics$viral_contig<-factor(splvl_metrics$viral_contig,levels=fold_order)
+
+figA<-ggplot(data=splvl_metrics[which((splvl_metrics$fold >= 1.5) & (splvl_metrics$d >= 0.75)),])+
 #scale_y_log10()+
-geom_bar(data=splvl_metrics,aes(x=viral_contig, y=d, fill=fold),position="dodge",stat="identity",colour="black",linewidth = 0)+
-#geom_point(data=splvl_metrics,aes(x=viral_contig, y=Max),position="dodge",stat="identity",colour="black",alpha=0.9)+
-scale_x_discrete(limits = fold_order)+
-theme_bw()
-#labs(title="% of total reads")+
-#theme(legend.position="top",text = element_text(size = 12),axis.text.x = element_text(angle = 45,hjust = 1,size=9),legend.key.size = unit(0.5, "cm"))+facet_grid(Variable ~ . , scales="free_y")
-#+scale_fill_manual(name="Taxon",values=sub_tax_coloring)
-#+scale_fill_manual(name="Taxon",values=phylum_coloring)
-ggsave("/mnt/smart/scratch/vir/felipe/gvSAGs/Read_Mapping_All_SAGs/d_barplots.pdf",plot=figA,device=cairo_pdf,width=45,height=10,pointsize=8)
+geom_bar(aes(x=viral_contig, y=d, fill=log10(fold)),position="dodge",stat="identity",colour="black",linewidth = 0)+
+geom_point(aes(x=viral_contig, y=Max))+
+theme_bw()+
+theme(axis.text.x = element_text(size=3, angle=90, hjust=1))+
+scale_fill_gradientn(colors=spectral_grad)
+
+ggsave("/mnt/smart/scratch/vir/felipe/gvSAGs/Read_Mapping_All_SAGs/d_barplots.pdf",plot=figA,device=cairo_pdf,width=35,height=10,pointsize=8,limitsize = FALSE)
 
 save.image(file='/mnt/smart/scratch/vir/felipe/gvSAGs/Read_Mapping_All_SAGs/NetworkMetrics.RData')
 # load('/mnt/smart/scratch/vir/felipe/gvSAGs/Read_Mapping_All_SAGs/NetworkMetrics.RData')

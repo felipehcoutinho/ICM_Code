@@ -23,13 +23,13 @@ Windows users:
 - Run putty, fill the Host name (or IP address) field with: username@address  replacing 'username' and 'address' accordingly to the server you are connecting to. Fill the "saved sessions" field with an easy to remember name for the server. Click save to store this for future use.
 
 <p align="center">
-  <img src="https://github.com/felipehcoutinho/virathon/blob/main/Virathon_Logo.png" width="400" height="400" alt="Virathon logo generated with DALLE"/>
+  <img src=https://github.com/felipehcoutinho/ICM_Code/tree/main/Tutorials_and_Courses/Setup/Figures/putty_config.png" width="400" height="400" alt="Putty config example"/>
 </p>
 
 - Run WinSCP. Click New site, and fill the username, address and password fields. Click save to store this for future use.
 
 <p align="center">
-  <img src="https://github.com/felipehcoutinho/virathon/blob/main/Virathon_Logo.png" width="400" height="400" alt="Virathon logo generated with DALLE"/>
+  <img src="https://github.com/felipehcoutinho/ICM_Code/tree/main/Tutorials_and_Courses/Setup/Figures/winscp_config.png" width="400" height="600" alt="WiNSCp config example"/>
 </p>
 
 Linux and Mac users:

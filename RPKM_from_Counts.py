@@ -23,7 +23,9 @@ for file in counts_files:
                 raw_abund_info[sample][scaffold] = int(read_count)
                 map_info[sample] = (int(read_count) + map_info.get(sample,0))
                 
-
+raw_matrix = pd.DataFrame.from_dict(raw_abund_info)
+raw_matrix.index.name = 'Sequence'
+raw_matrix.to_csv("Raw_Abundance.tsv",sep="\t",na_rep='NA')
             
 for sample in map_info:
     print(f"Calculating RPKM for {sample}")  
@@ -34,3 +36,4 @@ for sample in map_info:
 rpkm_matrix = pd.DataFrame.from_dict(rpkm_abund_info)
 rpkm_matrix.index.name = 'Sequence'
 rpkm_matrix.to_csv("RPKM.tsv",sep="\t",na_rep='NA')
+
