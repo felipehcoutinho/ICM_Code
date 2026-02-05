@@ -56,7 +56,7 @@ We are interested in the scaffolds.fasta files specifically.
 
 First, we look at the basic stats of the assemblies
 
-`module load perl`
+`module load perl/5.36`
 
 `perl /mnt/smart/scratch/vir/felipe/Repos/ICM_Code/assembly_stats_table.pl  Assembly*/scaffolds.fasta  > Assembly_Stats.tsv`
 
