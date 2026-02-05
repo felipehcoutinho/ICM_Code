@@ -19,4 +19,4 @@ cd /mnt/smart/scratch/vir/felipe/Workshops/Assemblies/
 
 module load spades/4.2.0
 
-spades.py -1 /mnt/smart/scratch/vir/felipe/Workshops/Raw_Reads/Blanes_Viromes/fastq/ABR_S3_R1_001.fastq.gz -2 /mnt/smart/scratch/vir/felipe/Workshops/Raw_Reads/Blanes_Viromes/fastq/ABR_S3_R1_001.fastq.gz -o Assembly_ABR_S3 --threads 24 --memory 250 --meta
+spades.py -1 /mnt/smart/scratch/vir/felipe/Workshops/Raw_Reads/Blanes_Viromes/fastq/ABR_S3_R1_001.fastq.gz -2 /mnt/smart/scratch/vir/felipe/Workshops/Raw_Reads/Blanes_Viromes/fastq/ABR_S3_R2_001.fastq.gz -o Assembly_ABR_S3 --threads 24 --memory 250 --meta
