@@ -15,6 +15,7 @@ Note: We will use VSCode to make it easier to write and edit code. It is VERY im
 
 Windows users only:
 Also download and install the following programs that you will use to connect and transfer files to the server:
+
 - [WinSCP](https://winscp.net/eng/download.php)
 - [Putty](https://putty.org/index.html)
 
@@ -50,6 +51,22 @@ https://www.geeksforgeeks.org/linux-unix/basic-shell-commands-in-linux/
 Recommended studying the Introduction and Scripting modules
 
 https://www.w3schools.com/bash/index.php 
+
+## Start a screen to run commands on the background
+
+`screen -S s1`
+
+Detach from the screen
+
+*Ctrl+A Ctrl+D*
+
+Deattach to the screen
+
+`screen -S s1 -r`
+
+End the screen
+
+`exit`
 
 ## Introduction to Slurm
 

@@ -277,10 +277,10 @@ calc_group_sums<-function(abd_df=NA,info_df=NA,first_group_var=NA,debug=FALSE,tr
         colnames(abd_df)[which(colnames(abd_df) == abd_id_var)]<-"Taxon_UID"
     }
     
-    #Add the relevant group into the abundance df as an additional COLUMN
+    # Add the relevant group into the abundance df as an additional COLUMN
     abd_df<-merge(abd_df,info_df[,c("Taxon_UID","Group")],by="Taxon_UID",all.x=TRUE)
 
-    #Replace NA values in the Group column by "Unclassified"
+    # Replace NA values in the Group column by "Unclassified"
     abd_df$Group<-as.character(abd_df$Group)
     abd_df$Group[which(abd_df$Group == "NA")] <- "Unclassified"
     abd_df$Group[which(abd_df$Group == "")] <- "Unclassified"
