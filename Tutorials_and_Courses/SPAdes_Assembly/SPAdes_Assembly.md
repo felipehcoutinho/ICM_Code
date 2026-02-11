@@ -56,6 +56,8 @@ Each succesful assembly will generate the following in the specified output dire
 
 We are interested in the scaffolds.fasta files specifically.
 
+## Assembly QC & scaffold filtering by length
+
 First, we look at the basic stats of the assemblies
 
 `module load perl/5.36`
@@ -66,7 +68,7 @@ SPAdes can often ouput short scaffolds which need to be filtered out. Also, the 
 
 `module load python/3.8.5`
 
-The loop below will iterate over the scaffolds.fasta file within each directory whose name starts with Assembly_ . in each iteration of the loop, the $asb variable will asume the value Assembly_.../scaffolds.fasta. In each iteration, we set the value of the variable $nam to the output of the sed command which, meaning $nam is obtaine by removing the Assembly_ prefix and /scaffolds.fasta/ suffix from the value of $asb. Using $asb and $nam variable we run the pythons script, specifying $asb as the input, while $nam is used to define the name of the output fasta file  Filtered_10Kbp_Renamed_${nam}.fasta and the prefix that will be used to rename the sequences, i.e. ${nam}_Scaffold_ . So each sequence in the output file will be renamed as, e.g. SampleA_Scaffold_1, SampleA_Scaffold_2, SampleA_Scaffold_3...
+The loop below will iterate over the scaffolds.fasta file within each directory whose name starts with Assembly_ . in each iteration of the loop, the $asb variable will asume the value Assembly_.../scaffolds.fasta. In each iteration, we set the value of the variable $nam to the output of the sed command which, meaning $nam is obtaine by removing the Assembly_ prefix and /scaffolds.fasta/ suffix from the value of $asb.We run the python script, specifying $asb as the input, while $nam is used to define the name of the output fasta file, i.e. Filtered_10Kbp_Renamed_$nam.fasta, and the prefix that will be used to rename the sequences, i.e. $nam\_Scaffold\_ . So each sequence in the output files will be renamed as, e.g. SampleA_Scaffold_1, SampleA_Scaffold_2, SampleB_Scaffold_1...
 
 `for asb in Assembly_*/scaffolds.fasta ; do nam=$(echo "$asb" | sed 's/Assembly_//' | sed 's/\/scaffolds.fasta//');  python3 /mnt/smart/scratch/vir/felipe/Repos/ICM_Code/rename_sequences.py --input $asb --output Filtered_10Kbp_Renamed_${nam}.fasta --min_length 10000 --string_rename ${nam}_Scaffold_ ; done`
 
