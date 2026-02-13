@@ -60,7 +60,7 @@ Detach from the screen
 
 *Ctrl+A Ctrl+D*
 
-Deattach to the screen
+Reattach to the screen
 
 `screen -S s1 -r`
 
