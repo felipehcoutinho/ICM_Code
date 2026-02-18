@@ -8,8 +8,7 @@ This tutorial will teach you how to identify viral sequences in metagenomic asse
 
 ## Commands
 
-Load the module and activate the environment
-
+Activate the environment
 
 `conda activate /mnt/smart/scratch/vir/felipe/envs/vs2`
 
@@ -36,7 +35,7 @@ The sequences classified as viral will be in the All_Filt_Asb_VS2_Output/final-v
 
 The output table All_Filt_Asb_VS2_Output/final-viral-score.tsv will be formatted as shown below:
 
-seqname |  dsDNAphage |  NCLDV |  ssDNA |  lavidaviridae |  max_score |  max_score_group |  length |  hallmark |  viral |  cellular |
+|seqname |  dsDNAphage |  NCLDV |  ssDNA |  lavidaviridae |  max_score |  max_score_group |  length |  hallmark |  viral |  cellular |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 Blanes_Viromes_ABR_Scaffold_1\|\|full |  1 |  0.387 |  0.12 |  0.247 |  1 |  dsDNAphage |  157010 |  12 |  71.4 |  0.6
 Blanes_Viromes_FEB_Scaffold_1\|\|full |  1 |  0.207 |  0.147 |  0.127 |  1 |  dsDNAphage |  111929 |  14 |  90.9 |  0
