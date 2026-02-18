@@ -1,6 +1,6 @@
 ## Introduction
 
-This tutorial will teach you how to identify viral sequences in metagenomic assemblies or integrated into host genomes 
+This tutorial will teach you how to identify viral sequences in metagenomic assemblies or integrated into host genomes. In metagenomic datasets there is usually a mix of organisms and their viruses. Even the viromes have some lelvel of contamination from celular organisms. Also, many viruses are capale of integrating their genomes into those of their host, even hen dealing with isolate genome data, these viral sequences might be present. Because of that, in metagenomic datasets we can never assume that all sequences in any datasets are all viral or all cellular. Often, these viral sequences will be fragmented, which makes their identification even harder. VirSorter2 is specially suitable for identifying viruses that infect Bacteria (i.e. bacteriophages) and Archaea, and diferrentiating between sequences that are entirely viral from those that are integrated into a prokaryote genome. Although it can also look for NCLDV whih ifnect eukaryotes, virophages (which infect the NCLDV), as well as ssDNA and RNA viruses that infect all organisms. 
 
 ## Software
 
@@ -10,10 +10,11 @@ This tutorial will teach you how to identify viral sequences in metagenomic asse
 
 Load the module and activate the environment
 
-`module load  virsorter/2.2.3`
 
-`conda activate vs2`
+`conda activate /mnt/smart/scratch/vir/felipe/envs/vs2`
 
+
+The input files are assembled sequences (NOT sequencing reads). It is recommended to do a filtering to remove sequences < 5K bp becse those have little information to be confidentely classified as viral. Some protocols recommend removing sequences < 10 Kbp for even mroe accuracy. Keep in mind that dsDNA viruses of Bacteria have genomes in the range of (15 Kbp - 250 Kbp, with Jumbo phages reaching up to 750 Kbp), while the NCLDV can be > 1 Mbp
 
 If the dataset is small. It is feasible to merge all filtered assembly files of all samples into a single fasta and perform  single virsorter run. This can be done with the cat command, examples:
 
@@ -23,8 +24,13 @@ OR
 
 `cat Filtered_Assembly_Sample_*.fasta > All_Filtered_Assebmlies.fasta`
 
+We can speed up the run by setting virsorter to use more threads specifically during the hmmsearch step
 
-`virsorter run --db /mnt/smart/scratch/vir/felipe/Databases/VS2/ --seqfile All_Filtered_Assebmlies.fasta --exclude-lt2gene --jobs 8 --include-groups dsDNAphage,NCLDV,ssDNA,lavidaviridae --working-dir All_Filt_Asb_VS2_Output`
+`virsorter config --set HMMSEARCH_THREADS=8`
+
+The command below will run VirSorter2, exclude sequences with less than 2 genes, as these cannot be reliabily classified as viruses. The program will look for viruses in the groups dsDNAphage, NCLDV, ssDNA, lavidaviridae. If we are interested in changing this behavior,we can run the command with instead with, e.g. `--include-groups dsDNAphage` or `--include-groups dsDNAphage,NCLDV`
+
+`virsorter run --seqfile All_Filtered_Assebmlies.fasta --exclude-lt2gene --jobs 8 --include-groups dsDNAphage,NCLDV,ssDNA,lavidaviridae --db-dir /mnt/smart/scratch/vir/felipe/Databases/VS2/ --working-dir All_Filt_Asb_VS2_Output all`
 
 The sequences classified as viral will be in the All_Filt_Asb_VS2_Output/final-viral-combined.fa file
 
