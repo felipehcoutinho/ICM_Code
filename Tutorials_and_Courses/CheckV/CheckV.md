@@ -14,6 +14,10 @@ Activate the environment
 
 Run checkv on your set of putative viral genomes
 
+Specify where the database is located
+
+`export CHECKVDB=/mnt/smart/scratch/vir/felipe/Databases/checkv-db-v1.5`
+
 `checkv end_to_end Viral_Genomes.fasta CheckV_Output -t 23`
 
 CheckV will output viruses and integrated proviruses to separate files. We merge them for downstream analysis
