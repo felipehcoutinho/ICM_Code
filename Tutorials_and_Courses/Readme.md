@@ -5,4 +5,5 @@
 - [Virus identification with VirSorter2](https://github.com/felipehcoutinho/ICM_Code/blob/main/Tutorials_and_Courses/VirSorter/VirSorter.md)
 - [Viral genome QC with CheckV](https://github.com/felipehcoutinho/ICM_Code/blob/main/Tutorials_and_Courses/CheckV/CheckV.md)
 - [Gene Calling and annotation of viral genomes](https://github.com/felipehcoutinho/ICM_Code/blob/main/Tutorials_and_Courses/Tutorials/Viral_Gene_Calling_and_Annotation.md)
+- [Bowtie2 Read Mapping](https://github.com/felipehcoutinho/ICM_Code/blob/main/Tutorials_and_Courses/Tutorials/Read_Mapping_Bowtie.md)
 - [KEGG Decoder](https://github.com/felipehcoutinho/ICM_Code/blob/main/Tutorials_and_Courses/KEGG_Decoder/kegg_decoder_workshop.md)
