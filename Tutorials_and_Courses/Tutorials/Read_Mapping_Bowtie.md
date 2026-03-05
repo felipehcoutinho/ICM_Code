@@ -8,6 +8,7 @@ Read mapping is often used to calculate the relative abundances of sequences in 
 
 - [Bowtie2](https://github.com/BenLangmead/bowtie2)
 - [SAMTools](https://github.com/samtools/samtools)
+- [CoverM](https://github.com/wwood/CoverM)
 
 ## Commands
 
@@ -65,9 +66,28 @@ if we have multiple counts files generated from mapping reads from multiple samp
 - The Raw_Abundance.tsv contains the number of PAIRED reads mapped to each sequence
 - The RPKM.tsv contains the number of read  PAIRED reads mapped per Kilo base pair in the sequence, per each 1 million MAPPED pairs
 
+## CoverM
+`module load coverM/0.7.0`
+
+use CoverM to count:
+
+- Total numbr of mapped reads
+
+`coverm contig --methods count --bam-files SampleAxDB_Genomes.bam --output-file CoverM_Counts_Report.tsv`
+
+- Average number of aligned reads overlapping each position on the contig:
+
+`coverm contig --methods mean --bam-files SampleAxDB_Genomes.bam --output-file CoverM_Mean_Report.tsv`
+
+- Number of bases covered by 1 or more reads:
+
+`coverm contig --methods covered_bases --bam-files SampleAxDB_Genomes.bam --output-file CoverM_Covered_Bases_Report.tsv`
+
+
 ## References
 
 - [Bowtie2 Publication](http://www.nature.com/nmeth/journal/v9/n4/full/nmeth.1923.html)
 - [Samtools Publication](https://doi.org/10.1093/gigascience/giab008)
+- [CoverM Publication](https://doi.org/10.1093/bioinformatics/btaf147)
 
 
